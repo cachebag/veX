@@ -1,8 +1,11 @@
+#include <SFML/Graphics/Text.hpp>
+#include <SFML/Graphics/Font.hpp>
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
 #include <vector>
+#include "../include/Orb.hpp" 
 
 int main() {
     // Get a list of all valid fullscreen modes
@@ -22,10 +25,23 @@ int main() {
         window.create(fullScreenMode, "veX", sf::Style::Fullscreen);
     }
 
-    // Common game setup (works for both fullscreen and windowed modes)
-    window.setFramerateLimit(120);
+    // Load font for displaying the orb counter
+    sf::Font font;
+    if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
+        std::cerr << "Error loading font!" << std::endl;
+        return -1;
+    }
 
+    // Create the orb counter text object
+    sf::Text orbCounterText;
+    orbCounterText.setFont(font);  // Set the loaded font
+    orbCounterText.setCharacterSize(24);  // Character size in pixels
+    orbCounterText.setFillColor(sf::Color::White);  // Text color
+    orbCounterText.setPosition(1700.0f, 20.0f);  // Position in the top-right corner
+
+    // Player and orb initialization
     Player player(0, 1000);
+    Orb orb(100.0f, 100.0f, 10.0f);
 
     // Level design: platforms
     std::vector<Platform> platforms = {
@@ -53,12 +69,25 @@ int main() {
         // Update player
         player.update(deltaTime, platforms);
 
+        // Check if orb is collected
+        if (orb.isCollected(player.getGlobalBounds())) {
+            player.collectOrb();
+        }
+
+        // Update the orb counter text
+        orbCounterText.setString("Orbs: " + std::to_string(player.getOrbCount()));
+
         // Clear the window and draw everything
         window.clear();
+
         for (const auto& platform : platforms) {
             platform.draw(window);
         }
+
         player.draw(window);
+        orb.draw(window);  // Draw the orb
+        window.draw(orbCounterText);  // Draw the orb counter
+
         window.display();
     }
 

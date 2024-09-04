@@ -2,8 +2,7 @@
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
 
-Player::Player(float startX, float startY) 
-    : x(startX), y(startY), yVelocity(0.0f), gravity(150.0f), terminalVelocity(10.0f), speedX(400.0f), jumpVelocity(-30.0f) {
+Player::Player(float startX, float startY) :  x(startX), y(startY), yVelocity(0.0f), gravity(150.0f), terminalVelocity(10.0f), speedX(400.0f), jumpVelocity(-30.0f), orbCount(0) {
     shape.setSize(sf::Vector2f(50.0f, 50.0f));
     shape.setFillColor(sf::Color::Blue);
     shape.setPosition(x, y);
@@ -24,6 +23,14 @@ sf::FloatRect Player::getGlobalBounds() const {
     return shape.getGlobalBounds();
 }
 
+void Player::collectOrb() {
+    orbCount ++;
+}
+
+int Player::getOrbCount() const {
+    return orbCount;
+}
+
 void Player::handleInput(float deltaTime) {
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
         x -= speedX * deltaTime;
@@ -37,7 +44,7 @@ void Player::handleInput(float deltaTime) {
 void Player::applyGravity(float deltaTime) {
     yVelocity += gravity * deltaTime;
     if (yVelocity > terminalVelocity) {
-        yVelocity += gravity * deltaTime;
+        yVelocity = jumpVelocity;
     }
 }
 

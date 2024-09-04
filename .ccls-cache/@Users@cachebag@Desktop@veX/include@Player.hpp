@@ -14,6 +14,10 @@ public:
 
     void boundDetection(int windowWidth, int windowHeight);
 
+    void collectOrb();
+
+    int getOrbCount() const;
+
 private:
     float x, y;
     float yVelocity;
@@ -21,6 +25,7 @@ private:
     const float terminalVelocity;
     const float speedX;
     const float jumpVelocity;
+    int orbCount;
     sf::RectangleShape shape;
 
     void handleInput(float deltaTime);
