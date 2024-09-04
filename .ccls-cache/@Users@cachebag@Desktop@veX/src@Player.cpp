@@ -7,6 +7,7 @@ Player::Player(float startX, float startY)
     shape.setSize(sf::Vector2f(50.0f, 50.0f));
     shape.setFillColor(sf::Color::Blue);
     shape.setPosition(x, y);
+    boundDetection(1920, 1080);
 }
 
 void Player::update(float deltaTime, const std::vector<Platform>& platforms) {
@@ -59,9 +60,29 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms) {
     }
 
     shape.setPosition(x, y);
+    boundDetection(1920, 1080);
 
     if (onGround && sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
         yVelocity = jumpVelocity;
     }
 }
 
+void Player::boundDetection(int windowWidth, int windowHeight) {
+    float playerWidth = shape.getSize().x;
+    float playerHeight = shape.getSize().y;
+
+    if (x < 0) {
+        x = 0;
+    }
+    if (x + playerWidth > windowWidth) {
+        x = windowWidth - playerWidth;
+    }
+    if (y < 0) {
+        y = 0;
+    }
+    if (y + playerHeight > windowHeight) {
+        y = windowHeight - playerHeight;
+    }
+
+    shape.setPosition(x, y);
+}

@@ -12,6 +12,8 @@ public:
     void draw(sf::RenderWindow& window) const;
     sf::FloatRect getGlobalBounds() const;
 
+    void boundDetection(int windowWidth, int windowHeight);
+
 private:
     float x, y;
     float yVelocity;
