@@ -1,7 +1,12 @@
+# Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -g
+INCLUDES = -Iinclude
 TARGET = game
-SOURCES = main.cpp
+
+# Sources and objects
+SRCDIR = src
+SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 
 # Platform detection
@@ -18,11 +23,11 @@ endif
 
 # Rule to build the final executable
 $(TARGET): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
 
 # Rule to build object files
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(SRCDIR)/%.o: $(SRCDIR)/%.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 # Rule to clean up the generated files
 clean:
