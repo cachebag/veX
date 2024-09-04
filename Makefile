@@ -1,10 +1,20 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -g -I/opt/homebrew/opt/sfml/include
-LDFLAGS = -L/opt/homebrew/opt/sfml/lib -lsfml-graphics -lsfml-window -lsfml-system
-
+CXXFLAGS = -std=c++17 -Wall -g
 TARGET = game
 SOURCES = main.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
+
+# Platform detection
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Linux)
+    LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system
+endif
+
+ifeq ($(UNAME_S),Darwin)
+    CXXFLAGS += -I/opt/homebrew/opt/sfml/include
+    LDFLAGS = -L/opt/homebrew/opt/sfml/lib -lsfml-graphics -lsfml-window -lsfml-system
+endif
 
 # Rule to build the final executable
 $(TARGET): $(OBJECTS)
