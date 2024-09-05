@@ -5,7 +5,7 @@
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
 #include <vector>
-#include "../include/Orb.hpp" 
+#include "../include/Orb.hpp"
 
 int main() {
     // Get a list of all valid fullscreen modes
@@ -41,7 +41,11 @@ int main() {
 
     // Player and orb initialization
     Player player(0, 1000);
-    Orb orb(100.0f, 100.0f, 10.0f);
+
+    std::vector<Orb> orbs ;
+    orbs.emplace_back(940.0f, 560.0f, 10.0f);
+    orbs.emplace_back(320.0f, 220.0f, 10.0f);
+    orbs.emplace_back(560.0f, 940.0f, 10.0f);
 
     // Level design: platforms
     std::vector<Platform> platforms = {
@@ -69,9 +73,14 @@ int main() {
         // Update player
         player.update(deltaTime, platforms);
 
-        // Check if orb is collected
-        if (orb.isCollected(player.getGlobalBounds())) {
-            player.collectOrb();
+        // Check if any orb is collected
+        for (auto it = orbs.begin(); it != orbs.end(); ) {
+            if (it->isCollected(player.getGlobalBounds())) {
+                player.collectOrb();
+                it = orbs.erase(it);  // Remove orb from the vector if collected
+            } else {
+                ++it;
+            }
         }
 
         // Update the orb counter text
@@ -85,8 +94,14 @@ int main() {
         }
 
         player.draw(window);
-        orb.draw(window);  // Draw the orb
-        window.draw(orbCounterText);  // Draw the orb counter
+
+        // Draw each remaining orb
+        for (const auto& orb : orbs) {
+            orb.draw(window);
+        }
+
+        // Draw the orb counter
+        window.draw(orbCounterText);
 
         window.display();
     }

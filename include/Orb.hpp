@@ -6,7 +6,7 @@ class Orb {
     public:
         Orb(float x, float y, float radius);
 
-        void draw(sf::RenderWindow &window);
+        void draw(sf::RenderWindow &window) const;
 
         bool isCollected(sf::FloatRect playerBounds);
 

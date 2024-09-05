@@ -8,7 +8,8 @@ Orb::Orb(float x, float y, float radius)
     shape.setPosition(x, y);
 }
 
-void Orb::draw(sf::RenderWindow &window) {
+// Marking draw as const to match the header file
+void Orb::draw(sf::RenderWindow &window) const {
     if (!collected) {
         window.draw(shape);
     }

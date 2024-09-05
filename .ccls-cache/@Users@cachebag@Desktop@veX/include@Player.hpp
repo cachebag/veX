@@ -1,4 +1,3 @@
-// Player.hpp
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -15,7 +14,6 @@ public:
     void boundDetection(int windowWidth, int windowHeight);
 
     void collectOrb();
-
     int getOrbCount() const;
 
 private:
@@ -25,6 +23,13 @@ private:
     const float terminalVelocity;
     const float speedX;
     const float jumpVelocity;
+
+    // New variables for jump and gravity mechanics
+    int jumpCount;            // Track the number of jumps (for double jump)
+    const int maxJumps;       // Maximum allowed jumps (2 for double jump)
+    const float fallMultiplier;      // Multiplier to make falling faster
+    const float lowJumpMultiplier;   // Multiplier to control jump height
+
     int orbCount;
     sf::RectangleShape shape;
 
