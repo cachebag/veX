@@ -6,6 +6,11 @@
 #include "../include/Platform.hpp"
 #include <vector>
 #include "../include/Orb.hpp"
+#include <cstdlib>
+#include <ctime>
+
+const int NUM_ORBS = 5;
+const float ORB_RADIUS = 10.0f;
 
 int main() {
     // Get a list of all valid fullscreen modes
@@ -37,15 +42,23 @@ int main() {
     orbCounterText.setFont(font);  // Set the loaded font
     orbCounterText.setCharacterSize(24);  // Character size in pixels
     orbCounterText.setFillColor(sf::Color::White);  // Text color
-    orbCounterText.setPosition(1700.0f, 20.0f);  // Position in the top-right corner
+    orbCounterText.setPosition(1700.0f, 20.0f);  // Position in the top-right corner 
 
-    // Player and orb initialization
+    // initialize a random seed
+    srand(static_cast<unsigned>(time(0)));
+   
+    std::vector<Orb> orbs;
+
+    // 5 random orbs
+    for (int i = 0; i < NUM_ORBS; ++i) {
+        float x = static_cast<float>(rand() % 800);
+        float y = static_cast<float>(rand() % 800);
+        orbs.push_back(Orb(x, y, ORB_RADIUS));
+    }
+
+    // Player initialization
     Player player(0, 1000);
 
-    std::vector<Orb> orbs ;
-    orbs.emplace_back(940.0f, 560.0f, 10.0f);
-    orbs.emplace_back(320.0f, 220.0f, 10.0f);
-    orbs.emplace_back(560.0f, 940.0f, 10.0f);
 
     // Level design: platforms
     std::vector<Platform> platforms = {
@@ -72,12 +85,25 @@ int main() {
 
         // Update player
         player.update(deltaTime, platforms);
+        
+        std::vector<Orb> orbs;
+
+        // 5 random orbs
+        for (int i = 0; i < NUM_ORBS; ++i) {
+            float x = static_cast<float>(rand() % 800);
+            float y = static_cast<float>(rand() % 800);
+            orbs.push_back(Orb(x, y, ORB_RADIUS));
+        }
 
         // Check if any orb is collected
         for (auto it = orbs.begin(); it != orbs.end(); ) {
             if (it->isCollected(player.getGlobalBounds())) {
+                float x = static_cast<float>(rand() % 800);
+                float y = static_cast<float>(rand() % 800);
                 player.collectOrb();
                 it = orbs.erase(it);  // Remove orb from the vector if collected
+                orbs.push_back(Orb(x, y, ORB_RADIUS));
+                break;
             } else {
                 ++it;
             }

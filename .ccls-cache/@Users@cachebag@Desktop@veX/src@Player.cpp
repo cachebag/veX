@@ -3,7 +3,7 @@
 
 Player::Player(float startX, float startY) 
     : x(startX), y(startY), 
-      yVelocity(0.0f), gravity(1500.0f), terminalVelocity(1000.0f), 
+      yVelocity(0.0f), gravity(2000.0f), terminalVelocity(1000.0f), 
       speedX(500.0f), jumpVelocity(-1500.0f), 
       jumpCount(0), maxJumps(2), 
       fallMultiplier(2.5f), lowJumpMultiplier(1.5f), 
@@ -77,7 +77,7 @@ void Player::applyGravity(float deltaTime) {
 
     // Cap velocity to terminal velocity
     if (yVelocity > terminalVelocity) {
-        yVelocity = terminalVelocity;
+        yVelocity += gravity * deltaTime;
     }
 }
 
@@ -96,10 +96,14 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms) {
             sf::FloatRect platformBounds = platform.getBounds();
 
             // Check if player is falling and collided with the top of a platform
-            if (yVelocity > 0.0f && (playerBounds.top + playerBounds.height) > platformBounds.top) {
+            if (yVelocity > 0.0f && (playerBounds.top + playerBounds.height) <= platformBounds.top + 5) {
                 y = platformBounds.top - playerBounds.height;  // Position player on top of the platform
                 yVelocity = 0.0f;  // Stop falling
                 onGround = true;    // Player is on the ground
+            }
+            else if (yVelocity < 0.0f && playerBounds.top >= platformBounds.top + platformBounds.height - 5) {
+                y = platformBounds.top + platformBounds.height;
+                yVelocity = 0.0f;
             }
         }
     }
