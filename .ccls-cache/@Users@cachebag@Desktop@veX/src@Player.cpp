@@ -6,7 +6,7 @@
 Player::Player(float startX, float startY) 
     : x(startX), y(startY), 
       yVelocity(0.0f), gravity(2000.0f), terminalVelocity(1000.0f), 
-      speedX(500.0f), jumpVelocity(-1500.0f), 
+      speedX(500.0f), jumpVelocity(-1000.0f), 
       jumpCount(0), maxJumps(2), 
       fallMultiplier(2.5f), lowJumpMultiplier(1.5f), 
       orbCount(0),
@@ -35,7 +35,7 @@ Player::Player(float startX, float startY)
 
     // Set initial sprite position and scale (if needed)
     sprite.setPosition(x, y);
-    sprite.setScale(1.5f, 1.5f);  // Scale to make the character larger if needed
+    sprite.setScale(2.0f, 2.0f);  // Scale to make the character larger if needed
 }
 
 void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
@@ -73,67 +73,87 @@ int Player::getOrbCount() const {
     return orbCount;
 }
 
+#include <iostream>  // Include for logging
+
 void Player::handleInput(float deltaTime) {
-    float velocityX = 0.0f;
-    bool wasIdle = isIdle; // store previous state
+    float velocityX = 0.0f;  // Horizontal velocity starts at 0
+    bool isMoving = false;   // Track if the player is moving
+
+    // Log current state
+    std::cout << "Current state: " << (isIdle ? "Idle" : "Moving") << std::endl;
 
     // Move left
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
         velocityX = -speedX;
-        if(sprite.getScale().x > 0) {
-            sprite.setScale(-1.5f, 1.5f);
+        isMoving = true;  // Player is moving
+        std::cout << "Moving left" << std::endl;
+
+        // Flip sprite to face left without changing position
+        if (sprite.getScale().x > 0) {
+            std::cout << "Flipping sprite to the left" << std::endl;
+            sprite.setScale(-2.0f, 2.0f);  // Flip horizontally
+            sprite.setOrigin(frameWidth, 0);  // Adjust origin to keep position consistent
         }
 
-        if (isIdle) {
-            sprite.setTexture(walkingTexture);  // Switch to walking texture
-            resetAnimation();  // Reset animation when switching states
-            isIdle = false;
+        // Only switch to walking texture if it's not already set
+        if (isIdle || sprite.getTexture() != &walkingTexture) {
+            std::cout << "Switching to walking texture" << std::endl;
+            sprite.setTexture(walkingTexture);
+            resetAnimation();  // Reset animation when switching to walking
+            isIdle = false;    // Mark player as moving
         }
     }
-
     // Move right
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
         velocityX = speedX;
-        if(sprite.getScale().x < 0) {
-            sprite.setScale(1.5f, 1.5f);
+        isMoving = true;  // Player is moving
+        std::cout << "Moving right" << std::endl;
+
+        // Flip sprite to face right without changing position
+        if (sprite.getScale().x < 0) {
+            std::cout << "Flipping sprite to the right" << std::endl;
+            sprite.setScale(2.0f, 2.0f);  // Flip horizontally back to normal
+            sprite.setOrigin(0, 0);  // Reset origin to default
         }
 
-        if (isIdle) {
-            sprite.setTexture(walkingTexture);  // Switch to walking texture
-            resetAnimation();  // Reset animation when switching states
-            isIdle = false;
+        // Only switch to walking texture if it's not already set
+        if (isIdle || sprite.getTexture() != &walkingTexture) {
+            std::cout << "Switching to walking texture" << std::endl;
+            sprite.setTexture(walkingTexture);
+            resetAnimation();  // Reset animation when switching to walking
+            isIdle = false;    // Mark player as moving
         }
     }
 
-    // If no movement, switch to idle animation (only when switching from moving to idle)
-    if (velocityX == 0.0f && !isIdle) {
-        sprite.setTexture(idleTexture);  // Switch to idle texture
-        resetAnimation();  // Reset animation when switching states
-        isIdle = true;
-    }
-
-    // Apply horizontal velocity
+    // Apply horizontal velocity if any
     x += velocityX * deltaTime;
+
+    // If no movement, set to idle but only switch texture if transitioning to idle
+        if (!isMoving && !isIdle) {
+            std::cout << "Switching to idle texture" << std::endl;
+            sprite.setTexture(idleTexture);  // Switch to idle texture only once when becoming idle
+            resetAnimation();  // Reset animation when switching to idle
+            isIdle = true;     // Mark player as idle
+        }
+
+// If moving, mark the player as not idle and prevent flickering
+if (isMoving && isIdle) {
+    isIdle = false;  // Only set to false when switching from idle to moving
+}
 
     // Jump logic
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
         if (canJump && jumpCount < maxJumps) {
+            std::cout << "Jumping" << std::endl;
             yVelocity = jumpVelocity;  // Apply jump velocity
             jumpCount++;  // Increment jump count
             canJump = false;
         }
     } else {
-        canJump = true;
-    }
-
-    if (wasIdle != isIdle) {
-        if(isIdle) {
-            sprite.setTexture(idleTexture);
-        } else {
-            sprite.setTexture(walkingTexture);
-        }
+        canJump = true;  // Allow jumping when space is released
     }
 }
+
 
 void Player::applyGravity(float deltaTime) {
     // Apply gravity with different effects based on rising or falling
@@ -150,7 +170,7 @@ void Player::applyGravity(float deltaTime) {
 
     // Cap velocity to terminal velocity
     if (yVelocity > terminalVelocity) {
-        yVelocity = terminalVelocity;
+        yVelocity += deltaTime;
     }
 }
 
