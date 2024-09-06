@@ -14,21 +14,11 @@ const float ORB_RADIUS = 10.0f;
 
 int main() {
     // Get a list of all valid fullscreen modes
-    std::vector<sf::VideoMode> modes = sf::VideoMode::getFullscreenModes();
+    sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
 
-    sf::RenderWindow window;
+    sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
     
-    if (modes.empty()) {
-        std::cerr << "Error: No valid fullscreen modes available, running in windowed mode (1920x1080)." << std::endl;
-        
-        // Fallback to windowed mode with 1920x1080 resolution
-        sf::VideoMode windowedMode(2560, 1440);
-        window.create(windowedMode, "veX", sf::Style::Default);
-    } else {
-        // Use the first (most preferred) fullscreen mode
-        sf::VideoMode fullScreenMode = modes[0];
-        window.create(fullScreenMode, "veX", sf::Style::Fullscreen);
-    }
+    sf::Vector2u windowSize = window.getSize();
 
     // Load font for displaying the orb counter
     sf::Font font;
@@ -62,10 +52,10 @@ int main() {
 
     // Level design: platforms
     std::vector<Platform> platforms = {
-        Platform(0.0f, 1030.0f, 1920.0f, 50.0f),
-        Platform(900.0f, 800.0f, 200.0f, 20.0f),
-        Platform(600.0f, 600.0f, 200.0f, 20.0f),
-        Platform(900.0f, 400.0f, 200.0f, 20.0f)
+        Platform(0.0f, 0.95f, 1.0f, 0.05f, sf::Color::White, windowSize),
+        Platform(0.47f, 0.75f, 0.1f, 0.02f, sf::Color::White, windowSize),
+        Platform(0.3f, 0.5f, 0.1f, 0.02f, sf::Color::White, windowSize),
+        Platform(0.47f, 0.5f, 0.1f, 0.02f, sf::Color::White, windowSize)
     };
 
     sf::Clock clock;
@@ -84,7 +74,9 @@ int main() {
         float deltaTime = clock.restart().asSeconds();
 
         // Update player
-        player.update(deltaTime, platforms);
+        player.update(deltaTime, platforms, window.getSize().x, window.getSize().y);
+        // Inside the game loop in main.cpp
+
         
         std::vector<Orb> orbs;
 

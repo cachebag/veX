@@ -1,32 +1,68 @@
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
+#include <iostream>
 
+// Constructor
 Player::Player(float startX, float startY) 
     : x(startX), y(startY), 
       yVelocity(0.0f), gravity(2000.0f), terminalVelocity(1000.0f), 
       speedX(500.0f), jumpVelocity(-1500.0f), 
       jumpCount(0), maxJumps(2), 
       fallMultiplier(2.5f), lowJumpMultiplier(1.5f), 
-      orbCount(0) 
+      orbCount(0),
+      currentFrameIndex(0),
+      animationTimer(0.0f),
+      frameDuration(0.1f),
+      isIdle(true),
+      canJump(true)
 {
-    shape.setSize(sf::Vector2f(50.0f, 50.0f));
-    shape.setFillColor(sf::Color::Blue);
-    shape.setPosition(x, y);
-    boundDetection(1920, 1080);
+    // Load the walking sprite sheet
+    if (!walkingTexture.loadFromFile("assets/characters/player/veX_sprite_sheet.png")) {
+        std::cerr << "Error loading walking texture file" << std::endl;
+    }
+
+    // Load the idle sprite sheet
+    if (!idleTexture.loadFromFile("assets/characters/player/veX_idle.png")) {
+        std::cerr << "Error loading idle texture file" << std::endl;
+    }
+    
+    // Set the initial texture to idle
+    sprite.setTexture(idleTexture);
+
+    // Set the initial frame for the sprite (32x32 size for each frame)
+    currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);  
+    sprite.setTextureRect(currentFrame);
+
+    // Set initial sprite position and scale (if needed)
+    sprite.setPosition(x, y);
+    sprite.setScale(1.5f, 1.5f);  // Scale to make the character larger if needed
 }
 
-void Player::update(float deltaTime, const std::vector<Platform>& platforms) {
+void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
     handleInput(deltaTime);
     applyGravity(deltaTime);
-    move(deltaTime, platforms);
+    move(deltaTime, platforms, windowWidth, windowHeight);
+
+    // Update animation frame based on time
+    animationTimer += deltaTime;
+
+    if (animationTimer >= frameDuration) {
+        currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
+        currentFrame.left = currentFrameIndex * frameWidth;  // Move horizontally through the sprite sheet
+        sprite.setTextureRect(currentFrame);  // Apply the new frame to the sprite
+        animationTimer = 0.0f;
+    }
+
+    // Update sprite position to match player movement
+    sprite.setPosition(x, y);
 }
 
 void Player::draw(sf::RenderWindow& window) const {
-    window.draw(shape);
+    window.draw(sprite);  // Draw the player sprite
 }
 
 sf::FloatRect Player::getGlobalBounds() const {
-    return shape.getGlobalBounds();
+    return sprite.getGlobalBounds();  // Return the global bounds of the sprite
 }
 
 void Player::collectOrb() {
@@ -37,18 +73,47 @@ int Player::getOrbCount() const {
     return orbCount;
 }
 
-bool canJump = true;
-
 void Player::handleInput(float deltaTime) {
-    // Move left and right
+    float velocityX = 0.0f;
+    bool wasIdle = isIdle; // store previous state
+
+    // Move left
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-        x -= speedX * deltaTime;
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-        x += speedX * deltaTime;
+        velocityX = -speedX;
+        if(sprite.getScale().x > 0) {
+            sprite.setScale(-1.5f, 1.5f);
+        }
+
+        if (isIdle) {
+            sprite.setTexture(walkingTexture);  // Switch to walking texture
+            resetAnimation();  // Reset animation when switching states
+            isIdle = false;
+        }
     }
 
-    shape.setPosition(x, y);
+    // Move right
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+        velocityX = speedX;
+        if(sprite.getScale().x < 0) {
+            sprite.setScale(1.5f, 1.5f);
+        }
+
+        if (isIdle) {
+            sprite.setTexture(walkingTexture);  // Switch to walking texture
+            resetAnimation();  // Reset animation when switching states
+            isIdle = false;
+        }
+    }
+
+    // If no movement, switch to idle animation (only when switching from moving to idle)
+    if (velocityX == 0.0f && !isIdle) {
+        sprite.setTexture(idleTexture);  // Switch to idle texture
+        resetAnimation();  // Reset animation when switching states
+        isIdle = true;
+    }
+
+    // Apply horizontal velocity
+    x += velocityX * deltaTime;
 
     // Jump logic
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
@@ -59,6 +124,14 @@ void Player::handleInput(float deltaTime) {
         }
     } else {
         canJump = true;
+    }
+
+    if (wasIdle != isIdle) {
+        if(isIdle) {
+            sprite.setTexture(idleTexture);
+        } else {
+            sprite.setTexture(walkingTexture);
+        }
     }
 }
 
@@ -77,49 +150,13 @@ void Player::applyGravity(float deltaTime) {
 
     // Cap velocity to terminal velocity
     if (yVelocity > terminalVelocity) {
-        yVelocity += gravity * deltaTime;
+        yVelocity = terminalVelocity;
     }
-}
-
-void Player::move(float deltaTime, const std::vector<Platform>& platforms) {
-    // Move the player vertically by applying yVelocity
-    y += yVelocity * deltaTime;
-
-    sf::FloatRect playerBounds = shape.getGlobalBounds();
-    playerBounds.top = y;
-
-    bool onGround = false;
-
-    // Check for collisions with platforms
-    for (const auto& platform : platforms) {
-        if (playerBounds.intersects(platform.getBounds())) {
-            sf::FloatRect platformBounds = platform.getBounds();
-
-            // Check if player is falling and collided with the top of a platform
-            if (yVelocity > 0.0f && (playerBounds.top + playerBounds.height) <= platformBounds.top + 5) {
-                y = platformBounds.top - playerBounds.height;  // Position player on top of the platform
-                yVelocity = 0.0f;  // Stop falling
-                onGround = true;    // Player is on the ground
-            }
-            else if (yVelocity < 0.0f && playerBounds.top >= platformBounds.top + platformBounds.height - 5) {
-                y = platformBounds.top + platformBounds.height;
-                yVelocity = 0.0f;
-            }
-        }
-    }
-
-    if (onGround) {
-        jumpCount = 0;  // Reset jump count when the player is on the ground
-        canJump = true;
-    }
-
-    shape.setPosition(x, y);
-    boundDetection(1920, 1080);
 }
 
 void Player::boundDetection(int windowWidth, int windowHeight) {
-    float playerWidth = shape.getSize().x;
-    float playerHeight = shape.getSize().y;
+    float playerWidth = sprite.getGlobalBounds().width;
+    float playerHeight = sprite.getGlobalBounds().height;
 
     // Horizontal bounds
     if (x < 0) {
@@ -140,6 +177,53 @@ void Player::boundDetection(int windowWidth, int windowHeight) {
         jumpCount = 0;  // Reset jump count if hitting the bottom
     }
 
-    shape.setPosition(x, y);
+    sprite.setPosition(x, y);
+}
+
+void Player::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+    // Move the player vertically by applying yVelocity
+    y += yVelocity * deltaTime;
+
+    sf::FloatRect playerBounds = sprite.getGlobalBounds();
+    playerBounds.top = y;
+
+    bool onGround = false;
+
+    // Check for collisions with platforms
+    for (const auto& platform : platforms) {
+        sf::FloatRect platformBounds = platform.getBounds();
+
+        // Check for top collision (landing on top of the platform)
+        if (playerBounds.intersects(platformBounds)) {
+            if (yVelocity > 0.0f && (playerBounds.top + playerBounds.height) <= platformBounds.top + 5) {
+                y = platformBounds.top - playerBounds.height;  // Position player on top of the platform
+                yVelocity = 0.0f;  // Stop falling
+                onGround = true;    // Player is on the ground
+            }
+            // Handle bottom collision (hitting the platform from below)
+            else if (yVelocity < 0.0f && playerBounds.top >= platformBounds.top + platformBounds.height - 5) {
+                y = platformBounds.top + platformBounds.height;  // Position player below the platform
+                yVelocity = 0.0f;  // Stop upward motion
+            }
+        }
+    }
+
+    // If the player is on the ground, reset the jump count
+    if (onGround) {
+        jumpCount = 0;
+        canJump = true;
+    }
+
+    // Update the sprite's position to match the player's new position
+    sprite.setPosition(x, y);
+    boundDetection(windowWidth, windowHeight);
+}
+
+// Helper to reset the animation
+void Player::resetAnimation() {
+    currentFrameIndex = 0;
+    animationTimer = 0.0f;
+    currentFrame.left = 0;  // Reset to the first frame
+    sprite.setTextureRect(currentFrame);
 }
 
