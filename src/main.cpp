@@ -22,7 +22,7 @@ int main() {
         std::cerr << "Error: No valid fullscreen modes available, running in windowed mode (1920x1080)." << std::endl;
         
         // Fallback to windowed mode with 1920x1080 resolution
-        sf::VideoMode windowedMode(1920, 1080);
+        sf::VideoMode windowedMode(2560, 1440);
         window.create(windowedMode, "veX", sf::Style::Default);
     } else {
         // Use the first (most preferred) fullscreen mode
@@ -89,11 +89,6 @@ int main() {
         std::vector<Orb> orbs;
 
         // 5 random orbs
-        for (int i = 0; i < NUM_ORBS; ++i) {
-            float x = static_cast<float>(rand() % 800);
-            float y = static_cast<float>(rand() % 800);
-            orbs.push_back(Orb(x, y, ORB_RADIUS));
-        }
 
         // Check if any orb is collected
         for (auto it = orbs.begin(); it != orbs.end(); ) {
@@ -102,8 +97,6 @@ int main() {
                 float y = static_cast<float>(rand() % 800);
                 player.collectOrb();
                 it = orbs.erase(it);  // Remove orb from the vector if collected
-                orbs.push_back(Orb(x, y, ORB_RADIUS));
-                break;
             } else {
                 ++it;
             }

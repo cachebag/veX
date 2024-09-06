@@ -31,7 +31,17 @@ private:
     const float lowJumpMultiplier;   // Multiplier to control jump height
 
     int orbCount;
-    sf::RectangleShape shape;
+
+    sf::Texture texture;
+    sf::Sprite sprite;
+    sf::IntRect currentFrame;
+
+    int frameWidth = 32;
+    int frameHeight = 32;
+    int totalFrames = 4;
+    float animationTimer = 0.0f;
+    float frameDuration = 0.1f;
+    int currentFrameIndex = 0;
 
     void handleInput(float deltaTime);
     void applyGravity(float deltaTime);
