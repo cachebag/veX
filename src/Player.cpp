@@ -14,7 +14,8 @@ Player::Player(float startX, float startY)
       animationTimer(0.0f),
       frameDuration(0.1f),
       isIdle(true),
-      canJump(true)
+      canJump(true),
+      isJumping(false)
 {
     // Load the walking sprite sheet
     if (!walkingTexture.loadFromFile("assets/characters/player/veX_sprite_sheet.png")) {
@@ -78,12 +79,26 @@ int Player::getOrbCount() const {
     return orbCount;
 }
 
-#include <iostream>  // Include for logging
-
 void Player::handleInput(float deltaTime) {
     float velocityX = 0.0f;  // Horizontal velocity starts at 0
     bool isMoving = false;   // Track if the player is moving
-    bool isJumping = false;
+
+    // Jump logic
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+	isJumping = true;
+
+        if (canJump && jumpCount < maxJumps) {
+            yVelocity = jumpVelocity;  // Apply jump velocity
+            jumpCount++;  // Increment jump count
+            canJump = false;
+        }
+	if (isJumping) {
+	    sprite.setTexture(jumpTexture);
+	    resetAnimation();
+	}
+    } else {
+        canJump = true;  // Allow jumping when space is released
+    }
 
     // Move left
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
@@ -119,42 +134,17 @@ void Player::handleInput(float deltaTime) {
             sprite.setTexture(walkingTexture);
             resetAnimation();  // Reset animation when switching to walking
             isIdle = false;    // Mark player as moving
-        }
     }
+}
 
     // Apply horizontal velocity if any
     x += velocityX * deltaTime;
-
-    // Only switch to idle texture if transitioning from moving to idle
+	
+    // Set idle texture when not moving 
     if (!isMoving) {
         sprite.setTexture(idleTexture);     // Switch to idle texture
         resetAnimation();                   // Reset animation when switching to idle
         isIdle = true;                      // Mark player as idle
-    }
-
-    // Jump logic
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-        sprite.setTexture(jumpTexture);
-        resetAnimation();
-        isJumping = true;
-
-        if (canJump && jumpCount < maxJumps) {
-            yVelocity = jumpVelocity;  // Apply jump velocity
-            jumpCount++;  // Increment jump count
-            canJump = false;
-        }
-        if (isJumping && isMoving) {
-            sprite.setTexture(jumpTexture);
-            resetAnimation();
-            isIdle = false;
-        }
-    } else {
-        canJump = true;  // Allow jumping when space is released
-    }
-
-    if (isMoving && isJumping) {
-        sprite.setTexture(jumpTexture);
-        resetAnimation();
     }
 }
 
@@ -250,4 +240,3 @@ void Player::resetAnimation() {
     currentFrame.left = 0;  // Reset to the first frame
     sprite.setTextureRect(currentFrame);
 }
-
