@@ -31,6 +31,7 @@ private:
 
     sf::Texture walkingTexture; // Texture for walking animation
     sf::Texture idleTexture; // Texture for idle animation
+    sf::Texture jumpTexture; // Texture for jumping
     sf::Sprite sprite; // Sprite to represent the player
     sf::IntRect currentFrame; // Current animation frame (position and size)
 
@@ -39,6 +40,7 @@ private:
     float frameDuration; // Time between each frame change
     bool isIdle; // Indicates if the player is idle or moving
     bool canJump;
+    bool isInAir;
 
     const int frameWidth = 32; // Width of each frame in the sprite sheet
     const int frameHeight = 32; // Height of each frame in the sprite sheet

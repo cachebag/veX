@@ -25,6 +25,11 @@ Player::Player(float startX, float startY)
     if (!idleTexture.loadFromFile("assets/characters/player/veX_idle.png")) {
         std::cerr << "Error loading idle texture file" << std::endl;
     }
+
+    // Load jumping frame
+    if (!jumpTexture.loadFromFile("assets/characters/player/veX_jump.png")) {
+        std::cerr << "Error loading jump texture file" << std::endl;
+    }
     
     // Set the initial texture to idle
     sprite.setTexture(idleTexture);
@@ -78,6 +83,7 @@ int Player::getOrbCount() const {
 void Player::handleInput(float deltaTime) {
     float velocityX = 0.0f;  // Horizontal velocity starts at 0
     bool isMoving = false;   // Track if the player is moving
+    bool isJumping = false;
 
     // Move left
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
@@ -128,13 +134,27 @@ void Player::handleInput(float deltaTime) {
 
     // Jump logic
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+        sprite.setTexture(jumpTexture);
+        resetAnimation();
+        isJumping = true;
+
         if (canJump && jumpCount < maxJumps) {
             yVelocity = jumpVelocity;  // Apply jump velocity
             jumpCount++;  // Increment jump count
             canJump = false;
         }
+        if (isJumping && isMoving) {
+            sprite.setTexture(jumpTexture);
+            resetAnimation();
+            isIdle = false;
+        }
     } else {
         canJump = true;  // Allow jumping when space is released
+    }
+
+    if (isMoving && isJumping) {
+        sprite.setTexture(jumpTexture);
+        resetAnimation();
     }
 }
 
