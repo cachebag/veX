@@ -77,17 +77,15 @@ int main() {
         player.update(deltaTime, platforms, window.getSize().x, window.getSize().y);
         // Inside the game loop in main.cpp
 
-        
-        std::vector<Orb> orbs;
-
-        // 5 random orbs
-
         // Check if any orb is collected
         for (auto it = orbs.begin(); it != orbs.end(); ) {
             if (it->isCollected(player.getGlobalBounds())) {
-                float x = static_cast<float>(rand() % 800);
-                float y = static_cast<float>(rand() % 800);
                 player.collectOrb();
+
+                float x = static_cast<float>(rand() % window.getSize().x);
+                float y = static_cast<float>(rand() % window.getSize().y);
+                orbs.push_back(Orb(x, y, ORB_RADIUS));
+
                 it = orbs.erase(it);  // Remove orb from the vector if collected
             } else {
                 ++it;

@@ -79,25 +79,19 @@ void Player::handleInput(float deltaTime) {
     float velocityX = 0.0f;  // Horizontal velocity starts at 0
     bool isMoving = false;   // Track if the player is moving
 
-    // Log current state
-    std::cout << "Current state: " << (isIdle ? "Idle" : "Moving") << std::endl;
-
     // Move left
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
         velocityX = -speedX;
         isMoving = true;  // Player is moving
-        std::cout << "Moving left" << std::endl;
 
-        // Flip sprite to face left without changing position
+        // Flip sprite to face left
         if (sprite.getScale().x > 0) {
-            std::cout << "Flipping sprite to the left" << std::endl;
             sprite.setScale(-2.0f, 2.0f);  // Flip horizontally
             sprite.setOrigin(frameWidth, 0);  // Adjust origin to keep position consistent
         }
 
-        // Only switch to walking texture if it's not already set
-        if (isIdle || sprite.getTexture() != &walkingTexture) {
-            std::cout << "Switching to walking texture" << std::endl;
+        // Only switch to walking texture if transitioning from idle
+        if (isIdle) {
             sprite.setTexture(walkingTexture);
             resetAnimation();  // Reset animation when switching to walking
             isIdle = false;    // Mark player as moving
@@ -107,18 +101,15 @@ void Player::handleInput(float deltaTime) {
     else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
         velocityX = speedX;
         isMoving = true;  // Player is moving
-        std::cout << "Moving right" << std::endl;
 
-        // Flip sprite to face right without changing position
+        // Flip sprite to face right
         if (sprite.getScale().x < 0) {
-            std::cout << "Flipping sprite to the right" << std::endl;
             sprite.setScale(2.0f, 2.0f);  // Flip horizontally back to normal
             sprite.setOrigin(0, 0);  // Reset origin to default
         }
 
-        // Only switch to walking texture if it's not already set
-        if (isIdle || sprite.getTexture() != &walkingTexture) {
-            std::cout << "Switching to walking texture" << std::endl;
+        // Only switch to walking texture if transitioning from idle
+        if (isIdle) {
             sprite.setTexture(walkingTexture);
             resetAnimation();  // Reset animation when switching to walking
             isIdle = false;    // Mark player as moving
@@ -128,23 +119,16 @@ void Player::handleInput(float deltaTime) {
     // Apply horizontal velocity if any
     x += velocityX * deltaTime;
 
-    // If no movement, set to idle but only switch texture if transitioning to idle
-        if (!isMoving && !isIdle) {
-            std::cout << "Switching to idle texture" << std::endl;
-            sprite.setTexture(idleTexture);  // Switch to idle texture only once when becoming idle
-            resetAnimation();  // Reset animation when switching to idle
-            isIdle = true;     // Mark player as idle
-        }
-
-// If moving, mark the player as not idle and prevent flickering
-if (isMoving && isIdle) {
-    isIdle = false;  // Only set to false when switching from idle to moving
-}
+    // Only switch to idle texture if transitioning from moving to idle
+    if (!isMoving) {
+        sprite.setTexture(idleTexture);     // Switch to idle texture
+        resetAnimation();                   // Reset animation when switching to idle
+        isIdle = true;                      // Mark player as idle
+    }
 
     // Jump logic
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
         if (canJump && jumpCount < maxJumps) {
-            std::cout << "Jumping" << std::endl;
             yVelocity = jumpVelocity;  // Apply jump velocity
             jumpCount++;  // Increment jump count
             canJump = false;
