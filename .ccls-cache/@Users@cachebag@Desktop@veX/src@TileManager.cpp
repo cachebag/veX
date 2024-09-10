@@ -4,9 +4,7 @@
 
 TileManager::TileManager() {
     loadTextures();
-    
-    // Initialize an empty 100x100 grid for tile placement (you can adjust this)
-    levelGrid.resize(100, std::vector<TileType>(100, TileType::None));
+    levelGrid.resize(100, std::vector<TileType>(100, TileType::None)); // 100x100 grid for tile placement
 }
 
 void TileManager::loadTextures() {
@@ -22,29 +20,25 @@ void TileManager::loadTextures() {
 }
 
 void TileManager::draw(sf::RenderWindow& window) {
-    // Draw all placed tiles
     for (auto& tile : tiles) {
         window.draw(tile);
     }
-    
+
     if (debugMode) {
-        drawGrid(window); // Optional: Draw gridlines for debugging
+        drawGrid(window); 
     }
 }
 
 void TileManager::handleInput(sf::RenderWindow& window) {
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
         selectedTile = TileType::Ground;
-    }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
+    } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
         selectedTile = TileType::Ground2;
-    }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
+    } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
         selectedTile = TileType::Ground3;
     }
-    
+
     if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-        // Get mouse position and convert it to the grid position
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         int gridX = mousePos.x / tileSize;
         int gridY = mousePos.y / tileSize;
@@ -52,12 +46,11 @@ void TileManager::handleInput(sf::RenderWindow& window) {
         if (gridX >= 0 && gridY >= 0 && gridX < levelGrid.size() && gridY < levelGrid[0].size()) {
             levelGrid[gridX][gridY] = selectedTile;
 
-            // Create a visual representation (a tile) to display
             sf::RectangleShape tileShape(sf::Vector2f(tileSize, tileSize));
             tileShape.setPosition(gridX * tileSize, gridY * tileSize);
             tileShape.setTexture(tileTextures[selectedTile]);
 
-            tiles.push_back(tileShape); // Add it to the list of placed tiles
+            tiles.push_back(tileShape);
         }
     }
 }
@@ -69,10 +62,9 @@ void TileManager::saveLevel(const std::string& filename) {
         return;
     }
 
-    // Save the grid to a text file
     for (const auto& row : levelGrid) {
         for (const auto& tile : row) {
-            levelFile << static_cast<int>(tile) << " "; // Convert TileType enum to an integer
+            levelFile << static_cast<int>(tile) << " ";
         }
         levelFile << "\n";
     }
@@ -88,13 +80,14 @@ void TileManager::loadLevel(const std::string& filename) {
     }
 
     int tileType;
+    tiles.clear(); // Clear existing tiles
+
     for (int i = 0; i < levelGrid.size(); ++i) {
         for (int j = 0; j < levelGrid[i].size(); ++j) {
             levelFile >> tileType;
             levelGrid[i][j] = static_cast<TileType>(tileType);
 
             if (levelGrid[i][j] != TileType::None) {
-                // Visualize the tile
                 sf::RectangleShape tileShape(sf::Vector2f(tileSize, tileSize));
                 tileShape.setPosition(i * tileSize, j * tileSize);
                 tileShape.setTexture(tileTextures[levelGrid[i][j]]);
@@ -104,6 +97,10 @@ void TileManager::loadLevel(const std::string& filename) {
     }
 
     levelFile.close();
+}
+
+const std::vector<sf::RectangleShape>& TileManager::getPlacedTiles() const {
+    return tiles;  // Return the placed tiles for use in play mode
 }
 
 void TileManager::toggleDebugMode() {

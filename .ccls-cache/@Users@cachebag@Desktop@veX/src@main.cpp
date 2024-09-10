@@ -3,7 +3,8 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
-#include "TileManager.hpp"
+#include <memory>  // For std::unique_ptr
+#include "../include/TileManager.hpp"
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
 
@@ -17,7 +18,6 @@ sf::Text createHelpText(const sf::Font& font, GameMode mode) {
     helpText.setFillColor(sf::Color::White);
     helpText.setPosition(20.0f, 20.0f);
 
-    // Display different help messages depending on the current mode
     if (mode == GameMode::Play) {
         helpText.setString(
             "Play Mode\n"
@@ -28,7 +28,7 @@ sf::Text createHelpText(const sf::Font& font, GameMode mode) {
     } else if (mode == GameMode::Edit) {
         helpText.setString(
             "Edit Mode\n"
-            "1: Ground tile | 2: Ground2 tile | 3: Ground3 tile\n"
+            "1: Scorched Earth Tile | 2: Pavement Tile | 3: Dirt Rubble Tile\n"
             "Left Click to place tile\n"
             "Press S to save | Press L to load\n"
             "Press P to switch to Play Mode\n"
@@ -60,23 +60,17 @@ int main() {
     orbCounterText.setFillColor(sf::Color::White);
     orbCounterText.setPosition(1700.0f, 20.0f);
 
-    // Load texture (using only ground3.png for now)
-    sf::Texture groundTexture;
-    if (!groundTexture.loadFromFile("assets/tutorial_level/ground3.png")) {
-        std::cerr << "Error loading ground texture!" << std::endl;
-        return -1;
-    }
-
-    // Create platform and player for Play Mode
-    Platform groundPlatform(0.0f, 0.9f, 1.0f, 0.1f, groundTexture, windowSize);
-    float platformHeight = groundPlatform.getTiles().front().getGlobalBounds().top;
-    Player player(0, platformHeight - player.getGlobalBounds().height);
-
     // Clock for deltaTime
     sf::Clock clock;
 
     // Create TileManager for the level editor
     TileManager tileManager;
+
+    // Create player using std::unique_ptr
+    std::unique_ptr<Player> player = std::make_unique<Player>(0, 0);  // Initial position of player
+
+    // Platforms for Play Mode
+    std::vector<Platform> platforms;
 
     // Set initial mode to Play Mode
     GameMode currentMode = GameMode::Play;
@@ -99,6 +93,30 @@ int main() {
                     helpText = createHelpText(font, currentMode);  // Update help text
                 } else if (event.key.code == sf::Keyboard::P) {
                     currentMode = GameMode::Play;  // Switch to play mode
+
+                    // Load the placed tiles from the level editor
+                    const auto& placedTiles = tileManager.getPlacedTiles();
+
+                    platforms.clear();  // Clear existing platforms
+
+                    // Convert placed tiles into platforms
+                    for (const auto& tile : placedTiles) {
+                        sf::Texture* texture = const_cast<sf::Texture*>(tile.getTexture());
+                        float x = tile.getPosition().x / windowSize.x;
+                        float y = tile.getPosition().y / windowSize.y;
+                        float width = tile.getSize().x / windowSize.x;
+                        float height = tile.getSize().y / windowSize.y;
+
+                        // Create platform from tile
+                        platforms.emplace_back(x, y, width, height, *texture, windowSize);
+                    }
+
+                    // Reset the player to start position (e.g., top of first platform)
+                    if (!platforms.empty()) {
+                        float platformHeight = platforms.front().getTiles().front().getGlobalBounds().top;
+                        player = std::make_unique<Player>(0, platformHeight - player->getGlobalBounds().height);
+                    }
+
                     helpText = createHelpText(font, currentMode);  // Update help text
                 }
             }
@@ -117,15 +135,17 @@ int main() {
             float deltaTime = clock.restart().asSeconds();
 
             // Update player movement and logic
-            player.update(deltaTime, { groundPlatform }, windowSize.x, windowSize.y);
+            player->update(deltaTime, platforms, windowSize.x, windowSize.y);
 
-            // Draw the ground platform
-            groundPlatform.draw(window);
+            // Draw the platforms
+            for (auto& platform : platforms) {
+                platform.draw(window);
+            }
 
             // Draw the player
-            player.draw(window);
+            player->draw(window);
 
-            // Draw the orb counter
+            // Draw the orb counter (you can implement orb logic separately)
             window.draw(orbCounterText);
         } 
         else if (currentMode == GameMode::Edit) {
@@ -144,6 +164,7 @@ int main() {
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::L)) {
                 tileManager.loadLevel("levels/level1.txt");  // Load saved layout
             }
+
         }
 
         // Draw help text (controls)

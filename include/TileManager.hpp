@@ -12,8 +12,9 @@ public:
     void handleInput(sf::RenderWindow& window); // Handle tile placement
     void saveLevel(const std::string& filename); // Save the current level to a file
     void loadLevel(const std::string& filename); // Load a level from a file
-
     void toggleDebugMode(); // Toggle debug options like gridlines, etc.
+
+    const std::vector<sf::RectangleShape>& getPlacedTiles() const; // Get the tiles for play mode
     
 private:
     enum class TileType { None, Ground, Ground2, Ground3 };
