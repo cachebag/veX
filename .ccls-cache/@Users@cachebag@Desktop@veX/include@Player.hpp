@@ -40,11 +40,12 @@ private:
     float frameDuration; // Time between each frame change
     bool isIdle; // Indicates if the player is idle or moving
     bool canJump;
-    bool isInAir;
+    bool isJumping;
 
     const int frameWidth = 32; // Width of each frame in the sprite sheet
     const int frameHeight = 32; // Height of each frame in the sprite sheet
-    const int totalFrames = 3; // Number of frames in the animation
+    int totalFrames = 3; // Number of frames in the animation
+    const int idleTotalFrames = 3;
 
     void handleInput(float deltaTime);
     void applyGravity(float deltaTime);

@@ -6,7 +6,7 @@
 Player::Player(float startX, float startY) 
     : x(startX), y(startY), 
       yVelocity(0.0f), gravity(2000.0f), terminalVelocity(1000.0f), 
-      speedX(500.0f), jumpVelocity(-1000.0f), 
+      speedX(600.0f), jumpVelocity(-1100.0f), 
       jumpCount(0), maxJumps(2), 
       fallMultiplier(2.5f), lowJumpMultiplier(1.5f), 
       orbCount(0),
@@ -14,7 +14,8 @@ Player::Player(float startX, float startY)
       animationTimer(0.0f),
       frameDuration(0.1f),
       isIdle(true),
-      canJump(true)
+      canJump(true),
+      isJumping(false)
 {
     // Load the walking sprite sheet
     if (!walkingTexture.loadFromFile("assets/characters/player/veX_sprite_sheet.png")) {
@@ -22,7 +23,7 @@ Player::Player(float startX, float startY)
     }
 
     // Load the idle sprite sheet
-    if (!idleTexture.loadFromFile("assets/characters/player/veX_idle.png")) {
+    if (!idleTexture.loadFromFile("assets/characters/player/veX_breathe_sheet.png")) {
         std::cerr << "Error loading idle texture file" << std::endl;
     }
 
@@ -78,26 +79,36 @@ int Player::getOrbCount() const {
     return orbCount;
 }
 
-#include <iostream>  // Include for logging
-
 void Player::handleInput(float deltaTime) {
     float velocityX = 0.0f;  // Horizontal velocity starts at 0
     bool isMoving = false;   // Track if the player is moving
-    bool isJumping = false;
+
+    // Jump logic
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+        if (canJump && jumpCount < maxJumps) {
+            yVelocity = jumpVelocity;  // Apply jump velocity
+            jumpCount++;  // Increment jump count
+            canJump = false;
+            isJumping = true;  // Mark the player as jumping
+            sprite.setTexture(jumpTexture);  // Set the jump texture
+            resetAnimation();  // Reset the animation frame
+        }
+    } else {
+        canJump = true;  // Allow jumping when space is released
+    }
 
     // Move left
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
         velocityX = -speedX;
         isMoving = true;  // Player is moving
 
-        // Flip sprite to face left
         if (sprite.getScale().x > 0) {
             sprite.setScale(-2.0f, 2.0f);  // Flip horizontally
             sprite.setOrigin(frameWidth, 0);  // Adjust origin to keep position consistent
         }
 
-        // Only switch to walking texture if transitioning from idle
-        if (isIdle) {
+        // Only switch to walking texture if transitioning from idle and not jumping
+        if (isIdle && !isJumping) {
             sprite.setTexture(walkingTexture);
             resetAnimation();  // Reset animation when switching to walking
             isIdle = false;    // Mark player as moving
@@ -114,8 +125,8 @@ void Player::handleInput(float deltaTime) {
             sprite.setOrigin(0, 0);  // Reset origin to default
         }
 
-        // Only switch to walking texture if transitioning from idle
-        if (isIdle) {
+        // Only switch to walking texture if transitioning from idle and not jumping
+        if (isIdle && !isJumping) {
             sprite.setTexture(walkingTexture);
             resetAnimation();  // Reset animation when switching to walking
             isIdle = false;    // Mark player as moving
@@ -125,39 +136,34 @@ void Player::handleInput(float deltaTime) {
     // Apply horizontal velocity if any
     x += velocityX * deltaTime;
 
-    // Only switch to idle texture if transitioning from moving to idle
-    if (!isMoving) {
-        sprite.setTexture(idleTexture);     // Switch to idle texture
-        resetAnimation();                   // Reset animation when switching to idle
-        isIdle = true;                      // Mark player as idle
+    if (yVelocity >= 0) {
+        isJumping = false;  // Stop jumping when the player is falling down
     }
 
-    // Jump logic
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+    // Set idle texture when not moving and not jumping
+    if (!isMoving && !isJumping) {
+        if (!isIdle) {
+            sprite.setTexture(idleTexture);     // Switch to idle texture
+            totalFrames = idleTotalFrames;      // Idle animation
+            resetAnimation();                   // Reset animation when switching to idle
+            isIdle = true;                      // Mark player as idle
+        }
+    }
+
+    if (!isMoving && !isJumping) {
+        sprite.setTexture(idleTexture);
+        isIdle = true;
+    }
+
+    // Keep the jump texture if the player is in the air
+    if (isJumping) {
         sprite.setTexture(jumpTexture);
         resetAnimation();
-        isJumping = true;
-
-        if (canJump && jumpCount < maxJumps) {
-            yVelocity = jumpVelocity;  // Apply jump velocity
-            jumpCount++;  // Increment jump count
-            canJump = false;
-        }
-        if (isJumping && isMoving) {
-            sprite.setTexture(jumpTexture);
-            resetAnimation();
-            isIdle = false;
-        }
-    } else {
-        canJump = true;  // Allow jumping when space is released
+    } else if (isMoving) {
+        sprite.setTexture(walkingTexture);  // Set walking texture when moving
     }
 
-    if (isMoving && isJumping) {
-        sprite.setTexture(jumpTexture);
-        resetAnimation();
-    }
 }
-
 
 void Player::applyGravity(float deltaTime) {
     // Apply gravity with different effects based on rising or falling
@@ -174,7 +180,7 @@ void Player::applyGravity(float deltaTime) {
 
     // Cap velocity to terminal velocity
     if (yVelocity > terminalVelocity) {
-        yVelocity += deltaTime;
+        yVelocity += gravity * deltaTime;
     }
 }
 
@@ -209,30 +215,57 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms, int w
     y += yVelocity * deltaTime;
 
     sf::FloatRect playerBounds = sprite.getGlobalBounds();
-    playerBounds.top = y;
+    playerBounds.top = y;  // Adjust bounding box for current y position
 
     bool onGround = false;
+
+    // Define a small margin for edge sensitivity
+    float edgeMargin = 10.0f;  // Adjust for your desired edge tolerance
 
     // Check for collisions with platforms
     for (const auto& platform : platforms) {
         sf::FloatRect platformBounds = platform.getBounds();
 
-        // Check for top collision (landing on top of the platform)
+        // Check if the player is intersecting with the platform
         if (playerBounds.intersects(platformBounds)) {
-            if (yVelocity > 0.0f && (playerBounds.top + playerBounds.height) <= platformBounds.top + 5) {
-                y = platformBounds.top - playerBounds.height;  // Position player on top of the platform
-                yVelocity = 0.0f;  // Stop falling
-                onGround = true;    // Player is on the ground
+
+            // Handle vertical collision (falling on top of a platform or jumping into the bottom)
+            if (yVelocity > 0.0f) {  // Player is falling
+                if ((playerBounds.top + playerBounds.height) <= platformBounds.top + edgeMargin) {
+                    // Player is landing on top of the platform
+                    y = platformBounds.top - playerBounds.height;  // Set player on top of the platform
+                    yVelocity = 0.0f;  // Stop falling
+                    onGround = true;
+                }
+            } else if (yVelocity < 0.0f) {  // Player is jumping upwards
+                if (playerBounds.top >= platformBounds.top + platformBounds.height - edgeMargin) {
+                    // Player is hitting the bottom of the platform
+                    y = platformBounds.top + platformBounds.height;  // Set player below the platform
+                    yVelocity = 0.0f;  // Stop upward movement
+                }
             }
-            // Handle bottom collision (hitting the platform from below)
-            else if (yVelocity < 0.0f && playerBounds.top >= platformBounds.top + platformBounds.height - 5) {
-                y = platformBounds.top + platformBounds.height;  // Position player below the platform
-                yVelocity = 0.0f;  // Stop upward motion
+
+            // Handle horizontal collision (only if not on top or bottom)
+            float playerRight = playerBounds.left + playerBounds.width;
+            float playerLeft = playerBounds.left;
+            float platformRight = platformBounds.left + platformBounds.width;
+            float platformLeft = platformBounds.left;
+
+            // Prevent left-side collision
+            if (playerRight > platformLeft && playerLeft < platformLeft && 
+                (playerBounds.top + playerBounds.height) > platformBounds.top + edgeMargin) {
+                x = platformLeft - playerBounds.width;  // Push player to the left of the platform
+            }
+
+            // Prevent right-side collision
+            if (playerLeft < platformRight && playerRight > platformRight &&
+                (playerBounds.top + playerBounds.height) > platformBounds.top + edgeMargin) {
+                x = platformRight;  // Push player to the right of the platform
             }
         }
     }
 
-    // If the player is on the ground, reset the jump count
+    // If the player is on the ground, reset the jump count and allow jumping again
     if (onGround) {
         jumpCount = 0;
         canJump = true;

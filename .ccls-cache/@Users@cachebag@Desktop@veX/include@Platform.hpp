@@ -1,16 +1,19 @@
-// Platform.hpp
 #pragma once
 #include <SFML/Graphics.hpp>
 
 class Platform {
 public:
-    // Constructor that accepts window size for scaling
-    Platform(float x, float y, float width, float height, sf::Color color, const sf::Vector2u& windowSize);
+    Platform(float x, float y, float width, float height, sf::Texture& outerTexture, sf::Texture& innerTexture1, sf::Texture& innerTexture2, const sf::Vector2u& windowSize);
 
-    sf::FloatRect getBounds() const; // Get the bounding box of the platform
-    void draw(sf::RenderWindow& window) const; // Draw the platform
+    void draw(sf::RenderWindow& window);  // Draws the platform
+    sf::FloatRect getBounds() const;      // Get the bounding box of the platform
 
 private:
-    sf::RectangleShape shape; // The graphical representation of the platform
+    sf::RectangleShape outerLayer;    // Outer layer representing the top texture (ground.png)
+    sf::RectangleShape innerLayer1;   // First inner layer (ground2.png)
+    sf::RectangleShape innerLayer2;   // Second inner layer (ground3.png)
+
+    float perlinNoise(float x, float y) const;  // Perlin noise function for randomness
+    void createHole(float gapX, float gapY, float gapWidth, float gapHeight);  // Create hole in the platform
 };
 

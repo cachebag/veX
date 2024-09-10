@@ -89,9 +89,9 @@ void Player::handleInput(float deltaTime) {
             yVelocity = jumpVelocity;  // Apply jump velocity
             jumpCount++;  // Increment jump count
             canJump = false;
-            isJumping = true;
-            sprite.setTexture(jumpTexture);
-            resetAnimation();
+            isJumping = true;  // Mark the player as jumping
+            sprite.setTexture(jumpTexture);  // Set the jump texture
+            resetAnimation();  // Reset the animation frame
         }
     } else {
         canJump = true;  // Allow jumping when space is released
@@ -107,8 +107,8 @@ void Player::handleInput(float deltaTime) {
             sprite.setOrigin(frameWidth, 0);  // Adjust origin to keep position consistent
         }
 
-        // Only switch to walking texture if transitioning from idle
-        if (isIdle) {
+        // Only switch to walking texture if transitioning from idle and not jumping
+        if (isIdle && !isJumping) {
             sprite.setTexture(walkingTexture);
             resetAnimation();  // Reset animation when switching to walking
             isIdle = false;    // Mark player as moving
@@ -125,8 +125,8 @@ void Player::handleInput(float deltaTime) {
             sprite.setOrigin(0, 0);  // Reset origin to default
         }
 
-        // Only switch to walking texture if transitioning from idle
-        if (isIdle) {
+        // Only switch to walking texture if transitioning from idle and not jumping
+        if (isIdle && !isJumping) {
             sprite.setTexture(walkingTexture);
             resetAnimation();  // Reset animation when switching to walking
             isIdle = false;    // Mark player as moving
@@ -137,7 +137,7 @@ void Player::handleInput(float deltaTime) {
     x += velocityX * deltaTime;
 
     if (yVelocity >= 0) {
-        isJumping = false;
+        isJumping = false;  // Stop jumping when the player is falling down
     }
 
     // Set idle texture when not moving and not jumping
@@ -150,12 +150,19 @@ void Player::handleInput(float deltaTime) {
         }
     }
 
+    if (!isMoving && !isJumping) {
+        sprite.setTexture(idleTexture);
+        isIdle = true;
+    }
+
+    // Keep the jump texture if the player is in the air
     if (isJumping) {
         sprite.setTexture(jumpTexture);
         resetAnimation();
     } else if (isMoving) {
-        sprite.setTexture(walkingTexture);
+        sprite.setTexture(walkingTexture);  // Set walking texture when moving
     }
+
 }
 
 void Player::applyGravity(float deltaTime) {
@@ -208,30 +215,57 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms, int w
     y += yVelocity * deltaTime;
 
     sf::FloatRect playerBounds = sprite.getGlobalBounds();
-    playerBounds.top = y;
+    playerBounds.top = y;  // Adjust bounding box for current y position
 
     bool onGround = false;
+
+    // Define a small margin for edge sensitivity
+    float edgeMargin = 10.0f;  // Adjust for your desired edge tolerance
 
     // Check for collisions with platforms
     for (const auto& platform : platforms) {
         sf::FloatRect platformBounds = platform.getBounds();
 
-        // Check for top collision (landing on top of the platform)
+        // Check if the player is intersecting with the platform
         if (playerBounds.intersects(platformBounds)) {
-            if (yVelocity > 0.0f && (playerBounds.top + playerBounds.height) <= platformBounds.top + 5) {
-                y = platformBounds.top - playerBounds.height;  // Position player on top of the platform
-                yVelocity = 0.0f;  // Stop falling
-                onGround = true;    // Player is on the ground
+
+            // Handle vertical collision (falling on top of a platform or jumping into the bottom)
+            if (yVelocity > 0.0f) {  // Player is falling
+                if ((playerBounds.top + playerBounds.height) <= platformBounds.top + edgeMargin) {
+                    // Player is landing on top of the platform
+                    y = platformBounds.top - playerBounds.height;  // Set player on top of the platform
+                    yVelocity = 0.0f;  // Stop falling
+                    onGround = true;
+                }
+            } else if (yVelocity < 0.0f) {  // Player is jumping upwards
+                if (playerBounds.top >= platformBounds.top + platformBounds.height - edgeMargin) {
+                    // Player is hitting the bottom of the platform
+                    y = platformBounds.top + platformBounds.height;  // Set player below the platform
+                    yVelocity = 0.0f;  // Stop upward movement
+                }
             }
-            // Handle bottom collision (hitting the platform from below)
-            else if (yVelocity < 0.0f && playerBounds.top >= platformBounds.top + platformBounds.height - 5) {
-                y = platformBounds.top + platformBounds.height;  // Position player below the platform
-                yVelocity = 0.0f;  // Stop upward motion
+
+            // Handle horizontal collision (only if not on top or bottom)
+            float playerRight = playerBounds.left + playerBounds.width;
+            float playerLeft = playerBounds.left;
+            float platformRight = platformBounds.left + platformBounds.width;
+            float platformLeft = platformBounds.left;
+
+            // Prevent left-side collision
+            if (playerRight > platformLeft && playerLeft < platformLeft && 
+                (playerBounds.top + playerBounds.height) > platformBounds.top + edgeMargin) {
+                x = platformLeft - playerBounds.width;  // Push player to the left of the platform
+            }
+
+            // Prevent right-side collision
+            if (playerLeft < platformRight && playerRight > platformRight &&
+                (playerBounds.top + playerBounds.height) > platformBounds.top + edgeMargin) {
+                x = platformRight;  // Push player to the right of the platform
             }
         }
     }
 
-    // If the player is on the ground, reset the jump count
+    // If the player is on the ground, reset the jump count and allow jumping again
     if (onGround) {
         jumpCount = 0;
         canJump = true;
