@@ -222,45 +222,49 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms, int w
     // Define a small margin for edge sensitivity
     float edgeMargin = 10.0f;  // Adjust for your desired edge tolerance
 
-    // Check for collisions with platforms
+    // Check for collisions with platform tiles
     for (const auto& platform : platforms) {
-        sf::FloatRect platformBounds = platform.getBounds();
+        const auto& tiles = platform.getTiles();  // Get all the tiles from the platform
 
-        // Check if the player is intersecting with the platform
-        if (playerBounds.intersects(platformBounds)) {
+        for (const auto& tile : tiles) {
+            sf::FloatRect tileBounds = tile.getGlobalBounds();
 
-            // Handle vertical collision (falling on top of a platform or jumping into the bottom)
-            if (yVelocity > 0.0f) {  // Player is falling
-                if ((playerBounds.top + playerBounds.height) <= platformBounds.top + edgeMargin) {
-                    // Player is landing on top of the platform
-                    y = platformBounds.top - playerBounds.height;  // Set player on top of the platform
-                    yVelocity = 0.0f;  // Stop falling
-                    onGround = true;
+            // Check if the player is intersecting with the tile
+            if (playerBounds.intersects(tileBounds)) {
+
+                // Handle vertical collision (falling on top of a platform or jumping into the bottom)
+                if (yVelocity > 0.0f) {  // Player is falling
+                    if ((playerBounds.top + playerBounds.height) <= tileBounds.top + edgeMargin) {
+                        // Player is landing on top of the platform
+                        y = tileBounds.top - playerBounds.height;  // Set player on top of the platform
+                        yVelocity = 0.0f;  // Stop falling
+                        onGround = true;
+                    }
+                } else if (yVelocity < 0.0f) {  // Player is jumping upwards
+                    if (playerBounds.top >= tileBounds.top + tileBounds.height - edgeMargin) {
+                        // Player is hitting the bottom of the platform
+                        y = tileBounds.top + tileBounds.height;  // Set player below the platform
+                        yVelocity = 0.0f;  // Stop upward movement
+                    }
                 }
-            } else if (yVelocity < 0.0f) {  // Player is jumping upwards
-                if (playerBounds.top >= platformBounds.top + platformBounds.height - edgeMargin) {
-                    // Player is hitting the bottom of the platform
-                    y = platformBounds.top + platformBounds.height;  // Set player below the platform
-                    yVelocity = 0.0f;  // Stop upward movement
+
+                // Handle horizontal collision (only if not on top or bottom)
+                float playerRight = playerBounds.left + playerBounds.width;
+                float playerLeft = playerBounds.left;
+                float tileRight = tileBounds.left + tileBounds.width;
+                float tileLeft = tileBounds.left;
+
+                // Prevent left-side collision
+                if (playerRight > tileLeft && playerLeft < tileLeft && 
+                    (playerBounds.top + playerBounds.height) > tileBounds.top + edgeMargin) {
+                    x = tileLeft - playerBounds.width;  // Push player to the left of the tile
                 }
-            }
 
-            // Handle horizontal collision (only if not on top or bottom)
-            float playerRight = playerBounds.left + playerBounds.width;
-            float playerLeft = playerBounds.left;
-            float platformRight = platformBounds.left + platformBounds.width;
-            float platformLeft = platformBounds.left;
-
-            // Prevent left-side collision
-            if (playerRight > platformLeft && playerLeft < platformLeft && 
-                (playerBounds.top + playerBounds.height) > platformBounds.top + edgeMargin) {
-                x = platformLeft - playerBounds.width;  // Push player to the left of the platform
-            }
-
-            // Prevent right-side collision
-            if (playerLeft < platformRight && playerRight > platformRight &&
-                (playerBounds.top + playerBounds.height) > platformBounds.top + edgeMargin) {
-                x = platformRight;  // Push player to the right of the platform
+                // Prevent right-side collision
+                if (playerLeft < tileRight && playerRight > tileRight &&
+                    (playerBounds.top + playerBounds.height) > tileBounds.top + edgeMargin) {
+                    x = tileRight;  // Push player to the right of the tile
+                }
             }
         }
     }

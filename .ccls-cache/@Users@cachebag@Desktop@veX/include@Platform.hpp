@@ -1,19 +1,17 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <vector>
 
 class Platform {
 public:
-    Platform(float x, float y, float width, float height, sf::Texture& outerTexture, sf::Texture& innerTexture1, sf::Texture& innerTexture2, const sf::Vector2u& windowSize);
+    Platform(float x, float y, float width, float height, sf::Texture& texture, const sf::Vector2u& windowSize);
 
-    void draw(sf::RenderWindow& window);  // Draws the platform
+    void draw(sf::RenderWindow& window);  // Draws the tiled platform
     sf::FloatRect getBounds() const;      // Get the bounding box of the platform
 
-private:
-    sf::RectangleShape outerLayer;    // Outer layer representing the top texture (ground.png)
-    sf::RectangleShape innerLayer1;   // First inner layer (ground2.png)
-    sf::RectangleShape innerLayer2;   // Second inner layer (ground3.png)
+    const std::vector<sf::RectangleShape>& getTiles() const;  // Get individual tiles for collision detection
 
-    float perlinNoise(float x, float y) const;  // Perlin noise function for randomness
-    void createHole(float gapX, float gapY, float gapWidth, float gapHeight);  // Create hole in the platform
+private:
+    std::vector<sf::RectangleShape> tiles;  // A collection of tiled rectangles
 };
 
