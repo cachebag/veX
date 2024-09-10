@@ -17,11 +17,15 @@
   - [ ] PvE
   - [ ] Weapon
 - [ ] Finish animation for main player
-  - [ ]  Jumping
+  - [X]  Jumping
   - [X]  Walking
   - [X]  Idle
   - [ ]  Interact
   - [ ]  Death
+- [ ] Level editor
+  - [X] Create and delete tiles, platforms, etc
+  - [X] Load levels to edit
+  - [ ] GUI for loading and saving levels 
 - [ ] Design initial tutorial level
   - [ ] Platforms
   - [ ] Backdrop
@@ -29,4 +33,4 @@
 ---
 
 ### Notes
-- Next steps will be to lock down and refine the level design and basic player movement, create the art and define our player's full purpose and draw out the key mappings for control of the player.
+- Next steps include refining level editor for more detailed customization, better debugging and designing more art
