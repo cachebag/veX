@@ -44,7 +44,8 @@ private:
 
     const int frameWidth = 32; // Width of each frame in the sprite sheet
     const int frameHeight = 32; // Height of each frame in the sprite sheet
-    const int totalFrames = 3; // Number of frames in the animation
+    int totalFrames = 3; // Number of frames in the animation
+    const int idleTotalFrames = 3;
 
     void handleInput(float deltaTime);
     void applyGravity(float deltaTime);

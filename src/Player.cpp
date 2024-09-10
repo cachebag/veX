@@ -23,7 +23,7 @@ Player::Player(float startX, float startY)
     }
 
     // Load the idle sprite sheet
-    if (!idleTexture.loadFromFile("assets/characters/player/veX_idle.png")) {
+    if (!idleTexture.loadFromFile("assets/characters/player/veX_breathe_sheet.png")) {
         std::cerr << "Error loading idle texture file" << std::endl;
     }
 
@@ -89,9 +89,9 @@ void Player::handleInput(float deltaTime) {
             yVelocity = jumpVelocity;  // Apply jump velocity
             jumpCount++;  // Increment jump count
             canJump = false;
-	    isJumping = true;
-	    sprite.setTexture(jumpTexture);
-	    resetAnimation();
+            isJumping = true;
+            sprite.setTexture(jumpTexture);
+            resetAnimation();
         }
     } else {
         canJump = true;  // Allow jumping when space is released
@@ -102,7 +102,6 @@ void Player::handleInput(float deltaTime) {
         velocityX = -speedX;
         isMoving = true;  // Player is moving
 
-        // Flip sprite to face left
         if (sprite.getScale().x > 0) {
             sprite.setScale(-2.0f, 2.0f);  // Flip horizontally
             sprite.setOrigin(frameWidth, 0);  // Adjust origin to keep position consistent
@@ -131,39 +130,33 @@ void Player::handleInput(float deltaTime) {
             sprite.setTexture(walkingTexture);
             resetAnimation();  // Reset animation when switching to walking
             isIdle = false;    // Mark player as moving
+        }
     }
-}
 
     // Apply horizontal velocity if any
     x += velocityX * deltaTime;
 
     if (yVelocity >= 0) {
-	isJumping = false;
+        isJumping = false;
     }
 
     // Set idle texture when not moving and not jumping
     if (!isMoving && !isJumping) {
-        sprite.setTexture(idleTexture);     // Switch to idle texture
-        resetAnimation();                   // Reset animation when switching to idle
-        isIdle = true;                      // Mark player as idle
+        if (!isIdle) {
+            sprite.setTexture(idleTexture);     // Switch to idle texture
+            totalFrames = idleTotalFrames;      // Idle animation
+            resetAnimation();                   // Reset animation when switching to idle
+            isIdle = true;                      // Mark player as idle
+        }
     }
-	
-    // Set idle texture when not moving 
-    if (!isMoving) {
-        sprite.setTexture(idleTexture);     // Switch to idle texture
-        resetAnimation();                   // Reset animation when switching to idle
-        isIdle = true;                      // Mark player as idle
-    }
-    
+
     if (isJumping) {
-	sprite.setTexture(jumpTexture);
-	resetAnimation();
-    }
-    else if (isMoving) {
-	    sprite.setTexture(walkingTexture);
+        sprite.setTexture(jumpTexture);
+        resetAnimation();
+    } else if (isMoving) {
+        sprite.setTexture(walkingTexture);
     }
 }
-
 
 void Player::applyGravity(float deltaTime) {
     // Apply gravity with different effects based on rising or falling
@@ -180,7 +173,7 @@ void Player::applyGravity(float deltaTime) {
 
     // Cap velocity to terminal velocity
     if (yVelocity > terminalVelocity) {
-        yVelocity += deltaTime;
+        yVelocity += gravity * deltaTime;
     }
 }
 
@@ -256,3 +249,4 @@ void Player::resetAnimation() {
     currentFrame.left = 0;  // Reset to the first frame
     sprite.setTextureRect(currentFrame);
 }
+
