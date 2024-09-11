@@ -7,28 +7,32 @@ class TileManager {
 public:
     TileManager();
     
-    void loadTextures(); // Loads tile textures
-    void draw(sf::RenderWindow& window); // Draw tiles to the screen
-    void handleInput(sf::RenderWindow& window); // Handle tile placement
-    void saveLevel(const std::string& filename); // Save the current level to a file
-    void loadLevel(const std::string& filename); // Load a level from a file
-    void toggleDebugMode(); // Toggle debug options like gridlines, etc.
+    void loadTextures();
+    void draw(sf::RenderWindow& window);
+    void drawTileSelector(sf::RenderWindow& window);
+    void drawTilePreview(sf::RenderWindow& window);
+    void drawSaveLoadButtons(sf::RenderWindow& window);
+    void handleInput(sf::RenderWindow& window);
+    void saveLevel(const std::string& filename);
+    void loadLevel(const std::string& filename);
+    void toggleDebugMode();
+    void openTileSelectorPopup(sf::RenderWindow& mainWindow);  // New function
 
-    const std::vector<sf::RectangleShape>& getPlacedTiles() const; // Get the tiles for play mode
-    
+    const std::vector<sf::RectangleShape>& getPlacedTiles() const;
+
 private:
     enum class TileType { None, Ground, Ground2, Ground3 };
     TileType selectedTile = TileType::Ground;
 
     sf::Texture groundTexture, ground2Texture, ground3Texture;
     std::map<TileType, sf::Texture*> tileTextures;
-    std::vector<sf::RectangleShape> tiles; // Vector to store the placed tiles
+    std::vector<sf::RectangleShape> tiles;
 
     bool debugMode = false;
 
-    const int tileSize = 64; // Tile size in pixels
-    std::vector<std::vector<TileType>> levelGrid; // Grid representing the level layout
+    const int tileSize = 64;
+    std::vector<std::vector<TileType>> levelGrid;
 
-    void drawGrid(sf::RenderWindow& window); // Draw grid for debugging
+    void drawGrid(sf::RenderWindow& window);
 };
 

@@ -28,11 +28,12 @@ sf::Text createHelpText(const sf::Font& font, GameMode mode) {
     } else if (mode == GameMode::Edit) {
         helpText.setString(
             "Edit Mode\n"
-            "1: Scorched Earth Tile | 2: Pavement Tile | 3: Dirt Rubble Tile\n"
+            "Select tile from menu\n"
             "Left Click to place tile\n"
             "Press S to save | Press L to load\n"
             "Press P to switch to Play Mode\n"
             "Press D to toggle debug (grid)\n"
+            "Press T to open tile selector\n"
             "Press ESC to quit"
         );
     }
@@ -121,6 +122,11 @@ int main() {
                 }
             }
 
+            // Open tile selector window (press 'T')
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::T) {
+                tileManager.openTileSelectorPopup(window);  // Open the tile selector pop-up
+            }
+
             // Debug mode toggle (for grid lines, etc.)
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::D) {
                 tileManager.toggleDebugMode();
@@ -158,12 +164,14 @@ int main() {
             // Draw the tiles in the editor
             tileManager.draw(window);
 
-            // Add save/load functionality (optional)
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
-                tileManager.saveLevel("levels/level1.txt");  // Save current layout
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::L)) {
-                tileManager.loadLevel("levels/level1.txt");  // Load saved layout
-            }
+            // Draw the tile selector
+            tileManager.drawTileSelector(window);
+
+            // Draw a preview of the currently selected tile
+            tileManager.drawTilePreview(window);
+
+            // Add save/load functionality (buttons)
+            tileManager.drawSaveLoadButtons(window);
 
         }
 
