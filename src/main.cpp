@@ -9,6 +9,7 @@
 #include "../include/Platform.hpp"
 
 enum class GameMode { Play, Edit };
+std::cout << "Hello" << std::endl;
 
 // Function to create help text based on current mode
 sf::Text createHelpText(const sf::Font& font, GameMode mode) {
