@@ -49,7 +49,7 @@ int main() {
     // Load font for orb counter and help text
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
-        std::cerr << "Error loading font!" << std::endl;
+        std::cerr << "Error loading font." << std::endl;
         return -1;
     }
     // Clock for deltaTime
