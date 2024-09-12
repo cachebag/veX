@@ -1,22 +1,25 @@
 %gcc
 %cpp -std=c++17
 
-# Include paths for SFML headers (Linux)
+# SFML Headers for both platforms
+# Detect platform and add correct include paths
+%if uname == "Linux"
 -I/usr/include
-
-# Include paths for SFML headers (macOS with Homebrew)
--I/opt/homebrew/opt/sfml/include
-
-# Link SFML libraries
+-L/usr/lib/x86_64-linux-gnu
 -lsfml-graphics
 -lsfml-window
 -lsfml-system
 -lsfml-audio
 -lsfml-network
+%endif
 
-# Add the library path for linking (Linux)
--L/usr/lib/x86_64-linux-gnu
-
-# Add the library path for linking (macOS with Homebrew)
+%if uname == "Darwin"
+-I/opt/homebrew/opt/sfml/include
 -L/opt/homebrew/opt/sfml/lib
+-lsfml-graphics
+-lsfml-window
+-lsfml-system
+-lsfml-audio
+-lsfml-network
+%endif
 
