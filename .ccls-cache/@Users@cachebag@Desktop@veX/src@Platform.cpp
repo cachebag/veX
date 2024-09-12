@@ -1,4 +1,5 @@
 #include "../include/Platform.hpp"
+#include <cmath>
 
 // Constructor initializes the platform and sets up tiled sections
 Platform::Platform(float x, float y, float width, float height, sf::Texture& texture, const sf::Vector2u& windowSize) {

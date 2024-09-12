@@ -7,6 +7,7 @@
 #include "../include/TileManager.hpp"
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
+#include "../include/Background.hpp"
 
 enum class GameMode { Play, Edit };
 
@@ -46,20 +47,14 @@ int main() {
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
     sf::Vector2u windowSize = window.getSize();
-
     // Load font for orb counter and help text
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
-        std::cerr << "Error loading font!" << std::endl;
+        std::cerr << "Error loading font." << std::endl;
         return -1;
     }
 
-    // Orb counter text
-    sf::Text orbCounterText;
-    orbCounterText.setFont(font);
-    orbCounterText.setCharacterSize(24);
-    orbCounterText.setFillColor(sf::Color::White);
-    orbCounterText.setPosition(1700.0f, 20.0f);
+    Background farBackground("assets/tutorial_level/Battleground1.png");
 
     // Clock for deltaTime
     sf::Clock clock;
@@ -75,7 +70,6 @@ int main() {
 
     // Set initial mode to Play Mode
     GameMode currentMode = GameMode::Play;
-
     // Help text to show controls
     sf::Text helpText = createHelpText(font, currentMode);
 
@@ -133,7 +127,10 @@ int main() {
             }
         }
 
+
         window.clear();
+
+        farBackground.render(window, window.getSize());
 
         // Handle the two game modes
         if (currentMode == GameMode::Play) {
@@ -151,10 +148,7 @@ int main() {
             // Draw the player
             player->draw(window);
 
-            // Draw the orb counter (you can implement orb logic separately)
-            window.draw(orbCounterText);
-        } 
-        else if (currentMode == GameMode::Edit) {
+        } else if (currentMode == GameMode::Edit) {
             // **Editor Mode Logic**
             clock.restart();  // Reset clock to avoid sudden jumps in play mode
 

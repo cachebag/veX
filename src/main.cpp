@@ -7,9 +7,9 @@
 #include "../include/TileManager.hpp"
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
+#include "../include/Background.hpp"
 
 enum class GameMode { Play, Edit };
-std::cout << "Hello" << std::endl;
 
 // Function to create help text based on current mode
 sf::Text createHelpText(const sf::Font& font, GameMode mode) {
@@ -53,6 +53,9 @@ int main() {
         std::cerr << "Error loading font." << std::endl;
         return -1;
     }
+
+    Background farBackground("assets/tutorial_level/Battleground1.png");
+
     // Clock for deltaTime
     sf::Clock clock;
 
@@ -124,7 +127,10 @@ int main() {
             }
         }
 
+
         window.clear();
+
+        farBackground.render(window, window.getSize());
 
         // Handle the two game modes
         if (currentMode == GameMode::Play) {

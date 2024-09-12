@@ -46,7 +46,7 @@ void TileManager::openTileSelectorPopup(sf::RenderWindow& mainWindow) {
             // Check for tile selection
             if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
                 sf::Vector2i mousePos = sf::Mouse::getPosition(popupWindow);
-                if (tilePreview.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                if (tilePreview.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
                     selectedTile = tileType;  // Set selected tile
                     popupWindow.close();  // Close the pop-up window
                 }
@@ -92,7 +92,7 @@ void TileManager::drawTilePreview(sf::RenderWindow& window) {
     preview.setTexture(tileTextures[selectedTile]);
 
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-    preview.setPosition(mousePos.x - mousePos.x % tileSize, mousePos.y - mousePos.y % tileSize);
+    preview.setPosition(static_cast<float>(mousePos.x - mousePos.x % tileSize), static_cast<float>(mousePos.y - mousePos.y % tileSize));
 
     window.draw(preview);
 }
@@ -126,11 +126,11 @@ void TileManager::drawSaveLoadButtons(sf::RenderWindow& window) {
     if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
 
-        if (saveButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+        if (saveButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
             saveLevel("levels/level1.txt");
         }
 
-        if (loadButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+        if (loadButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
             loadLevel("levels/level1.txt");
         }
     }
@@ -143,7 +143,7 @@ void TileManager::handleInput(sf::RenderWindow& window) {
 
     // If left mouse button is pressed, place a tile
     if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-        if (gridX >= 0 && gridY >= 0 && gridX < levelGrid.size() && gridY < levelGrid[0].size()) {
+        if (gridX >= 0 && gridY >= 0 && static_cast<size_t>(gridX) < levelGrid.size() && static_cast<size_t>(gridY) < levelGrid[0].size()) {
             levelGrid[gridX][gridY] = selectedTile;
 
             sf::RectangleShape tileShape(sf::Vector2f(tileSize, tileSize));
@@ -156,7 +156,7 @@ void TileManager::handleInput(sf::RenderWindow& window) {
 
     // If right mouse button is pressed, remove the tile
     if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
-        if (gridX >= 0 && gridY >= 0 && gridX < levelGrid.size() && gridY < levelGrid[0].size()) {
+        if (gridX >= 0 && gridY >= 0 && static_cast<size_t>(gridX) < levelGrid.size() && static_cast<size_t>(gridY) < levelGrid[0].size()) {
             // Find the tile in the tiles vector and remove it
             auto it = std::remove_if(tiles.begin(), tiles.end(), [&](sf::RectangleShape& tile) {
                 return tile.getPosition().x == gridX * tileSize && tile.getPosition().y == gridY * tileSize;
@@ -171,7 +171,6 @@ void TileManager::handleInput(sf::RenderWindow& window) {
         }
     }
 }
-
 
 void TileManager::saveLevel(const std::string& filename) {
     std::ofstream levelFile(filename);
@@ -200,8 +199,8 @@ void TileManager::loadLevel(const std::string& filename) {
     int tileType;
     tiles.clear(); // Clear existing tiles
 
-    for (int i = 0; i < levelGrid.size(); ++i) {
-        for (int j = 0; j < levelGrid[i].size(); ++j) {
+    for (size_t i = 0; i < levelGrid.size(); ++i) {
+        for (size_t j = 0; j < levelGrid[i].size(); ++j) {
             levelFile >> tileType;
             levelGrid[i][j] = static_cast<TileType>(tileType);
 
@@ -225,15 +224,15 @@ void TileManager::drawGrid(sf::RenderWindow& window) {
     sf::RectangleShape line;
     line.setFillColor(sf::Color::Green);
 
-    for (int x = 0; x < window.getSize().x; x += tileSize) {
+    for (unsigned int x = 0; x < window.getSize().x; x += tileSize) {
         line.setSize(sf::Vector2f(1, window.getSize().y));
-        line.setPosition(x, 0);
+        line.setPosition(static_cast<float>(x), 0);
         window.draw(line);
     }
 
-    for (int y = 0; y < window.getSize().y; y += tileSize) {
+    for (unsigned int y = 0; y < window.getSize().y; y += tileSize) {
         line.setSize(sf::Vector2f(window.getSize().x, 1));
-        line.setPosition(0, y);
+        line.setPosition(0, static_cast<float>(y));
         window.draw(line);
     }
 }

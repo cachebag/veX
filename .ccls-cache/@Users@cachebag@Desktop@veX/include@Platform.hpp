@@ -2,6 +2,8 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 
+using namespace std;
+
 class Platform {
 public:
     Platform(float x, float y, float width, float height, sf::Texture& texture, const sf::Vector2u& windowSize);
