@@ -117,7 +117,7 @@ int main() {
             }
 
             // Open tile selector window (press 'T')
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::T) {
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::T) {e
                 tileManager.openTileSelectorPopup(window);  // Open the tile selector pop-up
             }
 
