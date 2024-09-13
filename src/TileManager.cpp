@@ -10,18 +10,24 @@ TileManager::TileManager() {
 void TileManager::loadTextures() {
     if (!groundTexture.loadFromFile("assets/tutorial_level/main_ground_t1.png") ||
         !ground2Texture.loadFromFile("assets/tutorial_level/main_ground_t2.png") ||
-        !ground3Texture.loadFromFile("assets/tutorial_level/main_ground_t3.png")) {
+        !ground3Texture.loadFromFile("assets/tutorial_level/main_ground_t3.png") ||
+        !rubbleTexture.loadFromFile("assets/tutorial_level/rubble.png") ||  // Load new textures
+        !undergroundTexture.loadFromFile("assets/tutorial_level/underground.png") ||
+        !naturalTexture.loadFromFile("assets/tutorial_level/natural.png")) {
         std::cerr << "Error loading tile textures!" << std::endl;
     }
 
     tileTextures[TileType::Ground] = &groundTexture;
     tileTextures[TileType::Ground2] = &ground2Texture;
     tileTextures[TileType::Ground3] = &ground3Texture;
+    tileTextures[TileType::Rubble] = &rubbleTexture;        // Assign new textures
+    tileTextures[TileType::Underground] = &undergroundTexture;
+    tileTextures[TileType::Natural] = &naturalTexture;
 }
 
 void TileManager::openTileSelectorPopup(sf::RenderWindow& mainWindow) {
     // Create a pop-up window for selecting tiles
-    sf::RenderWindow popupWindow(sf::VideoMode(300, 400), "Tile Selector", sf::Style::Titlebar | sf::Style::Close);
+    sf::RenderWindow popupWindow(sf::VideoMode(300, 800), "Tile Selector", sf::Style::Titlebar | sf::Style::Close);
     
     while (popupWindow.isOpen()) {
         sf::Event event;
@@ -72,8 +78,8 @@ void TileManager::draw(sf::RenderWindow& window) {
 void TileManager::drawTileSelector(sf::RenderWindow& window) {
     sf::RectangleShape tilePreview(sf::Vector2f(tileSize, tileSize));
     
-    float x = 20.0f;  // Margin for UI on the left side
-    float y = 20.0f;  // Initial Y position for tile selector
+    float x = 200.0f;  // Margin for UI on the left side
+    float y = 200.0f;  // Initial Y position for tile selector
 
     // Loop through all tiles in tileTextures map and display them in the selector
     for (const auto& [tileType, texture] : tileTextures) {

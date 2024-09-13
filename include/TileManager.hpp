@@ -21,10 +21,11 @@ public:
     const std::vector<sf::RectangleShape>& getPlacedTiles() const;
 
 private:
-    enum class TileType { None, Ground, Ground2, Ground3 };
+    enum class TileType { None, Ground, Ground2, Ground3, Rubble, Underground, Natural }; // Updated Enum
     TileType selectedTile = TileType::Ground;
 
     sf::Texture groundTexture, ground2Texture, ground3Texture;
+    sf::Texture rubbleTexture, undergroundTexture, naturalTexture;  // New textures
     std::map<TileType, sf::Texture*> tileTextures;
     std::vector<sf::RectangleShape> tiles;
 
