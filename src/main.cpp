@@ -54,7 +54,7 @@ int main() {
         return -1;
     }
 
-    Background farBackground("assets/tutorial_level/Battleground1.png");
+    Background background("assets/tutorial_level/background.png", "assets/tutorial_level/middleground.png", windowSize);
 
     // Clock for deltaTime
     sf::Clock clock;
@@ -130,7 +130,7 @@ int main() {
 
         window.clear();
 
-        farBackground.render(window, window.getSize());
+        background.render(window, window.getSize());
 
         // Handle the two game modes
         if (currentMode == GameMode::Play) {
