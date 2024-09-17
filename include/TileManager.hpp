@@ -3,7 +3,7 @@
 #include <vector>
 #include <map>
 
-const int tileDrawSize = 32;
+const int tileDrawSize = 64;
 
 class TileManager {
 public:
@@ -23,11 +23,10 @@ public:
     const std::vector<sf::RectangleShape>& getPlacedTiles() const;
 
 private:
-    enum class TileType { None, Ground, Ground2, Ground3, Rubble, Underground, Natural }; // Updated Enum
-    TileType selectedTile = TileType::Ground;
+    enum class TileType { None, Brick }; // Updated Enum
+    TileType selectedTile = TileType::Brick;
 
-    sf::Texture groundTexture, ground2Texture, ground3Texture;
-    sf::Texture rubbleTexture, undergroundTexture, naturalTexture;  // New textures
+    sf::Texture brickTexture;
     std::map<TileType, sf::Texture*> tileTextures;
     std::vector<sf::RectangleShape> tiles;
 

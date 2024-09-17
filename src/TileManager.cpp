@@ -8,21 +8,19 @@ TileManager::TileManager() {
 }
 
 void TileManager::loadTextures() {
-    if (!groundTexture.loadFromFile("assets/tutorial_level/main_ground_t1.png") ||
-        !ground2Texture.loadFromFile("assets/tutorial_level/main_ground_t2.png") ||
-        !ground3Texture.loadFromFile("assets/tutorial_level/main_ground_t3.png") ||
-        !rubbleTexture.loadFromFile("assets/tutorial_level/brick.png") ||  // Load new textures
-        !undergroundTexture.loadFromFile("assets/tutorial_level/underground.png") ||
-        !naturalTexture.loadFromFile("assets/tutorial_level/natural.png")) {
+    if (!brickTexture.loadFromFile("assets/tutorial_level/brick.png")) { 
         std::cerr << "Error loading tile textures!" << std::endl;
     }
 
-    tileTextures[TileType::Ground] = &groundTexture;
-    tileTextures[TileType::Ground2] = &ground2Texture;
-    tileTextures[TileType::Ground3] = &ground3Texture;
-    tileTextures[TileType::Rubble] = &rubbleTexture;        // Assign new textures
-    tileTextures[TileType::Underground] = &undergroundTexture;
-    tileTextures[TileType::Natural] = &naturalTexture;
+    auto scaleTexture = [](sf::Texture& texture) {
+        sf::Image img = texture.copyToImage();
+        img.create(64, 64, img.getPixelsPtr());
+        texture.loadFromImage(img);
+    };
+
+    scaleTexture(brickTexture);
+
+    tileTextures[TileType::Brick] = &brickTexture;
 }
 
 void TileManager::openTileSelectorPopup(sf::RenderWindow& mainWindow) {
@@ -100,10 +98,6 @@ void TileManager::drawTilePreview(sf::RenderWindow& window) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     preview.setPosition(static_cast<float>(mousePos.x - mousePos.x % tileDrawSize), static_cast<float>(mousePos.y - mousePos.y % tileDrawSize));
 
-    // Scale the texture to fit 64x64 if it doesn't already
-    sf::Vector2u textureSize = preview.getTexture()->getSize();
-    preview.setScale(static_cast<float>(tileDrawSize) / textureSize.x, static_cast<float>(tileDrawSize) / textureSize.y);
-
     window.draw(preview);
 }
 
@@ -160,10 +154,6 @@ void TileManager::handleInput(sf::RenderWindow& window) {
             sf::RectangleShape tileShape(sf::Vector2f(tileDrawSize, tileDrawSize));
             tileShape.setPosition(gridX * tileDrawSize, gridY * tileDrawSize);
             tileShape.setTexture(tileTextures[selectedTile]);
-
-            // Scale the tile to 64x64
-            sf::Vector2u textureSize = tileShape.getTexture()->getSize();
-            tileShape.setScale(static_cast<float>(tileDrawSize) / textureSize.x, static_cast<float>(tileDrawSize) / textureSize.y);
 
             tiles.push_back(tileShape);
         }
@@ -244,18 +234,19 @@ void TileManager::drawGrid(sf::RenderWindow& window) {
     sf::RectangleShape line;
     line.setFillColor(sf::Color::Green);
 
-    for (unsigned int x = 0; x < window.getSize().x; x += tileSize) {
+    for (unsigned int x = 0; x < window.getSize().x; x += tileDrawSize) {  // tileDrawSize is 64
         line.setSize(sf::Vector2f(1, window.getSize().y));
         line.setPosition(static_cast<float>(x), 0);
         window.draw(line);
     }
 
-    for (unsigned int y = 0; y < window.getSize().y; y += tileSize) {
+    for (unsigned int y = 0; y < window.getSize().y; y += tileDrawSize) {  // tileDrawSize is 64
         line.setSize(sf::Vector2f(window.getSize().x, 1));
         line.setPosition(0, static_cast<float>(y));
         window.draw(line);
     }
 }
+
 
 const std::vector<sf::RectangleShape>& TileManager::getPlacedTiles() const {
     return tiles;  // Return the placed tiles for use in play mode
