@@ -130,12 +130,16 @@ int main() {
 
         window.clear();
 
-        background.render(window, window.getSize());
+        float playerX = player->getGlobalBounds().left;
+
+        float deltaTime;
+        deltaTime = clock.restart().asSeconds();
+
+        background.render(window, window.getSize(), playerX, deltaTime);
 
         // Handle the two game modes
         if (currentMode == GameMode::Play) {
             // **Play Mode Logic**
-            float deltaTime = clock.restart().asSeconds();
 
             // Update player movement and logic
             player->update(deltaTime, platforms, windowSize.x, windowSize.y);

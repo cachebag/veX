@@ -6,7 +6,7 @@
 class Background {
 public:
     Background(const std::string& backgroundFilePath, const std::string& middlegroundFilePath, const sf::Vector2u& windowSize);
-    void render(sf::RenderWindow& window, const sf::Vector2u& windowSize);
+    void render(sf::RenderWindow& window, const sf::Vector2u& windowSize, float playerX, float deltaTime);
 
 private:
     sf::Texture backgroundTexture;
