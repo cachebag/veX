@@ -5,7 +5,7 @@
 
 class Background {
 public:
-    Background(const std::string& backgroundFilePath, const std::string& middlegroundFilePath, const sf::Vector2u& windowSize);
+    Background(const std::string& backgroundFilePath, const std::string& middlegroundFilePath, const std::string& mountaintsFilePath, const sf::Vector2u& windowSize);
     void render(sf::RenderWindow& window, const sf::Vector2u& windowSize, float playerX, float deltaTime);
 
 private:
@@ -14,6 +14,9 @@ private:
 
     sf::Texture middlegroundTexture;
     sf::Sprite middlegroundSprite;
+
+    sf::Texture mountainsTexture;
+    sf::Sprite mountainsSprite;
 };
 
 #endif // BACKGROUND_HPP

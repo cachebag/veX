@@ -54,7 +54,7 @@ int main() {
         return -1;
     }
 
-    Background background("assets/tutorial_level/background.png", "assets/tutorial_level/middleground.png", windowSize);
+    Background background("assets/tutorial_level/background.png", "assets/tutorial_level/middleground.png", "assets/tutorial_level/mountains.png", windowSize);
 
     // Clock for deltaTime
     sf::Clock clock;
