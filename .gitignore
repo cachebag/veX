@@ -1,3 +1,20 @@
+# Ignore the CCLS cache directory and files
+.ccls-cache/
+.ccls
+
+# Ignore Makefile
+Makefile
+
+# Ignore other files that are commonly ignored
+*.o
+*.out
+*.log
+*.tmp
+
+# Ignore hidden system files
 .DS_Store
-.DS_Store
-.ccls-cache
+Thumbs.db
+
+# Ignore Git-specific files
+.git/
+
