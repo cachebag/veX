@@ -1,6 +1,6 @@
 # veX
 
-**veX** is a 2D platformer game built using C++ and the SFML library.
+**veX** is a 2D platformer built using C++ and the SFML library.
 
 ## Progress Check
 
