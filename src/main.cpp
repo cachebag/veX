@@ -29,12 +29,10 @@ sf::Text createHelpText(const sf::Font& font, GameMode mode) {
     } else if (mode == GameMode::Edit) {
         helpText.setString(
             "Edit Mode\n"
-            "Select tile from menu\n"
             "Left Click to place tile\n"
             "Press S to save | Press L to load\n"
             "Press P to switch to Play Mode\n"
             "Press D to toggle debug (grid)\n"
-            "Press T to open tile selector\n"
             "Press ESC to quit"
         );
     }
@@ -47,6 +45,7 @@ int main() {
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
     sf::Vector2u windowSize = window.getSize();
+    
     // Load font for orb counter and help text
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
@@ -54,7 +53,9 @@ int main() {
         return -1;
     }
 
-    Background background("assets/tutorial_level/background.png", "assets/tutorial_level/middleground.png", "assets/tutorial_level/mountains.png", windowSize);
+    Background background("assets/tutorial_level/background.png", 
+                          "assets/tutorial_level/middleground.png", 
+                          "assets/tutorial_level/mountains.png", windowSize);
 
     // Clock for deltaTime
     sf::Clock clock;
@@ -70,6 +71,7 @@ int main() {
 
     // Set initial mode to Play Mode
     GameMode currentMode = GameMode::Play;
+
     // Help text to show controls
     sf::Text helpText = createHelpText(font, currentMode);
 
@@ -77,7 +79,8 @@ int main() {
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
+            if (event.type == sf::Event::Closed || 
+                (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
                 window.close();
             }
 
@@ -97,10 +100,10 @@ int main() {
                     // Convert placed tiles into platforms
                     for (const auto& tile : placedTiles) {
                         sf::Texture* texture = const_cast<sf::Texture*>(tile.getTexture());
-                        float x = tile.getPosition().x / windowSize.x;
-                        float y = tile.getPosition().y / windowSize.y;
-                        float width = tile.getSize().x / windowSize.x;
-                        float height = tile.getSize().y / windowSize.y;
+                        float x = tile.getPosition().x;
+                        float y = tile.getPosition().y;
+                        float width = tile.getSize().x;
+                        float height = tile.getSize().y;
 
                         // Create platform from tile
                         platforms.emplace_back(x, y, width, height, *texture, windowSize);
@@ -116,17 +119,16 @@ int main() {
                 }
             }
 
-            // Open tile selector window (press 'T')
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::T) {
-                tileManager.openTileSelectorPopup(window);  // Open the tile selector pop-up
-            }
-
             // Debug mode toggle (for grid lines, etc.)
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::D) {
                 tileManager.toggleDebugMode();
             }
-        }
 
+            // Handle tile placement in Edit mode
+            if (currentMode == GameMode::Edit) {
+                tileManager.handleInput(window);
+            }
+        }
 
         window.clear();
 
@@ -156,21 +158,14 @@ int main() {
             // **Editor Mode Logic**
             clock.restart();  // Reset clock to avoid sudden jumps in play mode
 
-            // Handle tile placement/input in the level editor
-            tileManager.handleInput(window);
-
             // Draw the tiles in the editor
             tileManager.draw(window);
-
-            // Draw the tile selector
-            tileManager.drawTileSelector(window);
 
             // Draw a preview of the currently selected tile
             tileManager.drawTilePreview(window);
 
-            // Add save/load functionality (buttons)
-            tileManager.drawSaveLoadButtons(window);
-
+            // Draw the sidebar with tile selection and save/load buttons
+            tileManager.drawSidebar(window);
         }
 
         // Draw help text (controls)

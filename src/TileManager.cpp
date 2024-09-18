@@ -1,6 +1,7 @@
 #include "../include/TileManager.hpp"
 #include <fstream>
 #include <iostream>
+#include "../include/nfd.h" // Include native file dialog header
 
 TileManager::TileManager() {
     loadTextures();
@@ -8,109 +9,153 @@ TileManager::TileManager() {
 }
 
 void TileManager::loadTextures() {
-    if (!brickTexture.loadFromFile("assets/tutorial_level/brick.png")) { 
-        std::cerr << "Error loading tile textures!" << std::endl;
-    }
+    // Load each texture from the assets folder and associate it with a TileType
+    if (!tileTextures[TileType::Brick].loadFromFile("assets/tutorial_level/brick.png"))
+        std::cerr << "Error loading brick texture!" << std::endl;
 
-    auto scaleTexture = [](sf::Texture& texture) {
-        sf::Image img = texture.copyToImage();
-        img.create(64, 64, img.getPixelsPtr());
-        texture.loadFromImage(img);
-    };
+    if (!tileTextures[TileType::BushLarge].loadFromFile("assets/tutorial_level/bush-large.png"))
+        std::cerr << "Error loading bush-large texture!" << std::endl;
 
-    scaleTexture(brickTexture);
+    if (!tileTextures[TileType::BushSmall].loadFromFile("assets/tutorial_level/bush-small.png"))
+        std::cerr << "Error loading bush-small texture!" << std::endl;
 
-    tileTextures[TileType::Brick] = &brickTexture;
+    if (!tileTextures[TileType::SlimeBlock].loadFromFile("assets/tutorial_level/slime-block.png"))
+        std::cerr << "Error loading slime-block texture!" << std::endl;
+
+    if (!tileTextures[TileType::Statue].loadFromFile("assets/tutorial_level/statue.png"))
+        std::cerr << "Error loading statue texture!" << std::endl;
+
+    if (!tileTextures[TileType::Stone1].loadFromFile("assets/tutorial_level/stone-1.png"))
+        std::cerr << "Error loading stone-1 texture!" << std::endl;
+
+    if (!tileTextures[TileType::Stone2].loadFromFile("assets/tutorial_level/stone-2.png"))
+        std::cerr << "Error loading stone-2 texture!" << std::endl;
+
+    if (!tileTextures[TileType::Stone3].loadFromFile("assets/tutorial_level/stone-3.png"))
+        std::cerr << "Error loading stone-3 texture!" << std::endl;
+
+    if (!tileTextures[TileType::Stone4].loadFromFile("assets/tutorial_level/stone-4.png"))
+        std::cerr << "Error loading stone-4 texture!" << std::endl;
+
+    if (!tileTextures[TileType::Tree1].loadFromFile("assets/tutorial_level/tree-1.png"))
+        std::cerr << "Error loading tree-1 texture!" << std::endl;
+
+    if (!tileTextures[TileType::Tree2].loadFromFile("assets/tutorial_level/tree-2.png"))
+        std::cerr << "Error loading tree-2 texture!" << std::endl;
+
+    if (!tileTextures[TileType::Tree3].loadFromFile("assets/tutorial_level/tree-3.png"))
+        std::cerr << "Error loading tree-3 texture!" << std::endl;
+
+    if (!tileTextures[TileType::Rock].loadFromFile("assets/tutorial_level/rock.png"))
+        std::cerr << "Error loading rock texture!" << std::endl;
 }
 
-void TileManager::openTileSelectorPopup(sf::RenderWindow& mainWindow) {
-    // Create a pop-up window for selecting tiles
-    sf::RenderWindow popupWindow(sf::VideoMode(300, 800), "Tile Selector", sf::Style::Titlebar | sf::Style::Close);
-    
-    while (popupWindow.isOpen()) {
-        sf::Event event;
-        while (popupWindow.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
-                popupWindow.close();  // Close the pop-up window
-            }
+void TileManager::saveLevel() {
+    nfdchar_t* savePath = nullptr;
+    nfdresult_t result = NFD_SaveDialog("txt", nullptr, &savePath);
+
+    if (result == NFD_OKAY) {
+        std::ofstream levelFile(savePath);
+        if (!levelFile) {
+            std::cerr << "Error saving level!" << std::endl;
+            return;
         }
 
-        popupWindow.clear();
-        
-        sf::RectangleShape tilePreview(sf::Vector2f(tileSize, tileSize));
-        float x = 50.0f;
-        float y = 50.0f;
+        for (const auto& row : levelGrid) {
+            for (const auto& tile : row) {
+                levelFile << static_cast<int>(tile) << " ";
+            }
+            levelFile << "\n";
+        }
 
-        // Loop through all tiles in tileTextures map and display them
-        for (const auto& [tileType, texture] : tileTextures) {
-            tilePreview.setPosition(x, y);
-            tilePreview.setTexture(texture);
-            popupWindow.draw(tilePreview);
+        levelFile.close();
+        std::cout << "Level saved to: " << savePath << std::endl;
+        free(savePath);
+    } else if (result == NFD_CANCEL) {
+        std::cout << "Save canceled." << std::endl;
+    } else {
+        std::cerr << "Error opening save dialog." << std::endl;
+    }
+}
 
-            // Check for tile selection
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-                sf::Vector2i mousePos = sf::Mouse::getPosition(popupWindow);
-                if (tilePreview.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-                    selectedTile = tileType;  // Set selected tile
-                    popupWindow.close();  // Close the pop-up window
+void TileManager::loadLevel() {
+    nfdchar_t* loadPath = nullptr;
+    nfdresult_t result = NFD_OpenDialog("txt", nullptr, &loadPath);
+
+    if (result == NFD_OKAY) {
+        std::ifstream levelFile(loadPath);
+        if (!levelFile) {
+            std::cerr << "Error loading level!" << std::endl;
+            return;
+        }
+
+        int tileType;
+        tiles.clear();  // Clear existing tiles
+
+        for (size_t i = 0; i < levelGrid.size(); ++i) {
+            for (size_t j = 0; j < levelGrid[i].size(); ++j) {
+                levelFile >> tileType;
+                levelGrid[i][j] = static_cast<TileType>(tileType);
+
+                if (levelGrid[i][j] != TileType::None) {
+                    sf::RectangleShape tileShape(sf::Vector2f(tileDrawSize, tileDrawSize));
+                    tileShape.setPosition(i * tileDrawSize, j * tileDrawSize);
+                    tileShape.setTexture(&tileTextures[levelGrid[i][j]]);
+
+                    tiles.push_back(tileShape);
                 }
             }
-
-            y += tileSize + 10.0f;
         }
 
-        popupWindow.display();
+        levelFile.close();
+        std::cout << "Level loaded from: " << loadPath << std::endl;
+        free(loadPath);
+    } else if (result == NFD_CANCEL) {
+        std::cout << "Load canceled." << std::endl;
+    } else {
+        std::cerr << "Error opening load dialog." << std::endl;
     }
 }
 
-void TileManager::draw(sf::RenderWindow& window) {
-    for (auto& tile : tiles) {
-        window.draw(tile);
-    }
-
-    if (debugMode) {
-        drawGrid(window); 
-    }
+void TileManager::toggleDebugMode() {
+    debugMode = !debugMode;
 }
 
-void TileManager::drawTileSelector(sf::RenderWindow& window) {
-    sf::RectangleShape tilePreview(sf::Vector2f(tileSize, tileSize));
-    
-    float x = 200.0f;  // Margin for UI on the left side
-    float y = 200.0f;  // Initial Y position for tile selector
+void TileManager::drawSidebar(sf::RenderWindow& window) {
+    sf::RectangleShape sidebar(sf::Vector2f(200, window.getSize().y));
+    sidebar.setFillColor(sf::Color(50, 50, 50));
+    sidebar.setPosition(window.getSize().x - 200, 0);
+    window.draw(sidebar);
 
-    // Loop through all tiles in tileTextures map and display them in the selector
+    float x = window.getSize().x - 180;
+    float y = 20.0f;
+
     for (const auto& [tileType, texture] : tileTextures) {
-        tilePreview.setPosition(x, y);
-        tilePreview.setTexture(texture);
-        tilePreview.setOutlineThickness(2);
-        tilePreview.setOutlineColor(tileType == selectedTile ? sf::Color::Red : sf::Color::Transparent);
-        window.draw(tilePreview);
+        sf::RectangleShape tileButton(sf::Vector2f(tileSize, tileSize));
+        tileButton.setPosition(x, y);
+        tileButton.setTexture(&texture);
+        tileButton.setOutlineThickness(2);
+        tileButton.setOutlineColor(tileType == selectedTile ? sf::Color::Red : sf::Color::Transparent);
+        window.draw(tileButton);
 
-        y += tileSize + 10.0f;  // Move down for the next tile in the menu
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+            sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            if (tileButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
+                selectedTile = tileType;  // Select the tile
+            }
+        }
+
+        y += tileSize + 10.0f;  // Move down for the next tile
     }
-}
 
-void TileManager::drawTilePreview(sf::RenderWindow& window) {
-    sf::RectangleShape preview(sf::Vector2f(tileDrawSize, tileDrawSize));
-    preview.setTexture(tileTextures[selectedTile]);
-
-    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-    preview.setPosition(static_cast<float>(mousePos.x - mousePos.x % tileDrawSize), static_cast<float>(mousePos.y - mousePos.y % tileDrawSize));
-
-    window.draw(preview);
-}
-
-
-void TileManager::drawSaveLoadButtons(sf::RenderWindow& window) {
     sf::RectangleShape saveButton(sf::Vector2f(150, 50));
-    saveButton.setPosition(window.getSize().x - 350, 20);  // Positioned at top-right
+    saveButton.setPosition(window.getSize().x - 180, window.getSize().y - 150);
     saveButton.setFillColor(sf::Color::Blue);
     saveButton.setOutlineThickness(2);
     saveButton.setOutlineColor(sf::Color::White);
 
     sf::RectangleShape loadButton(sf::Vector2f(150, 50));
-    loadButton.setPosition(window.getSize().x - 180, 20);  // Positioned at top-right next to save button
+    loadButton.setPosition(window.getSize().x - 180, window.getSize().y - 80);
     loadButton.setFillColor(sf::Color::Green);
     loadButton.setOutlineThickness(2);
     loadButton.setOutlineColor(sf::Color::White);
@@ -121,22 +166,20 @@ void TileManager::drawSaveLoadButtons(sf::RenderWindow& window) {
     sf::Font font;
     font.loadFromFile("assets/fonts/Merriweather-Regular.ttf");
     sf::Text saveText("Save", font, 20);
-    saveText.setPosition(window.getSize().x - 320, 30);
+    saveText.setPosition(window.getSize().x - 140, window.getSize().y - 140);
     window.draw(saveText);
 
     sf::Text loadText("Load", font, 20);
-    loadText.setPosition(window.getSize().x - 150, 30);
+    loadText.setPosition(window.getSize().x - 140, window.getSize().y - 70);
     window.draw(loadText);
 
     if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-
         if (saveButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            saveLevel("levels/level1.txt");
+            saveLevel();
         }
-
         if (loadButton.getGlobalBounds().contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
-            loadLevel("levels/level1.txt");
+            loadLevel();
         }
     }
 }
@@ -146,20 +189,22 @@ void TileManager::handleInput(sf::RenderWindow& window) {
     int gridX = mousePos.x / tileDrawSize;
     int gridY = mousePos.y / tileDrawSize;
 
-    // If left mouse button is pressed, place a tile
+    if (isMouseInSidebar(window)) {
+        return;
+    }
+
     if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
         if (gridX >= 0 && gridY >= 0 && static_cast<size_t>(gridX) < levelGrid.size() && static_cast<size_t>(gridY) < levelGrid[0].size()) {
             levelGrid[gridX][gridY] = selectedTile;
 
             sf::RectangleShape tileShape(sf::Vector2f(tileDrawSize, tileDrawSize));
             tileShape.setPosition(gridX * tileDrawSize, gridY * tileDrawSize);
-            tileShape.setTexture(tileTextures[selectedTile]);
+            tileShape.setTexture(&tileTextures[selectedTile]);
 
             tiles.push_back(tileShape);
         }
     }
 
-    // If right mouse button is pressed, remove the tile (same as before)
     if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
         if (gridX >= 0 && gridY >= 0 && static_cast<size_t>(gridX) < levelGrid.size() && static_cast<size_t>(gridY) < levelGrid[0].size()) {
             auto it = std::remove_if(tiles.begin(), tiles.end(), [&](sf::RectangleShape& tile) {
@@ -170,85 +215,52 @@ void TileManager::handleInput(sf::RenderWindow& window) {
                 tiles.erase(it, tiles.end());
             }
 
-            // Clear the tile from the grid
             levelGrid[gridX][gridY] = TileType::None;
         }
     }
 }
 
-void TileManager::saveLevel(const std::string& filename) {
-    std::ofstream levelFile(filename);
-    if (!levelFile) {
-        std::cerr << "Error saving level!" << std::endl;
-        return;
-    }
-
-    for (const auto& row : levelGrid) {
-        for (const auto& tile : row) {
-            levelFile << static_cast<int>(tile) << " ";
-        }
-        levelFile << "\n";
-    }
-
-    levelFile.close();
+void TileManager::drawTilePreview(sf::RenderWindow& window) {
+    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+    sf::RectangleShape preview(sf::Vector2f(tileDrawSize, tileDrawSize));
+    preview.setPosition(static_cast<float>(mousePos.x - mousePos.x % tileDrawSize), static_cast<float>(mousePos.y - mousePos.y % tileDrawSize));
+    preview.setTexture(&tileTextures[selectedTile]);
+    window.draw(preview);
 }
 
-void TileManager::loadLevel(const std::string& filename) {
-    std::ifstream levelFile(filename);
-    if (!levelFile) {
-        std::cerr << "Error loading level!" << std::endl;
-        return;
-    }
-
-    int tileType;
-    tiles.clear(); // Clear existing tiles
-
-    for (size_t i = 0; i < levelGrid.size(); ++i) {
-        for (size_t j = 0; j < levelGrid[i].size(); ++j) {
-            levelFile >> tileType;
-            levelGrid[i][j] = static_cast<TileType>(tileType);
-
-            if (levelGrid[i][j] != TileType::None) {
-                sf::RectangleShape tileShape(sf::Vector2f(tileDrawSize, tileDrawSize));
-                tileShape.setPosition(i * tileDrawSize, j * tileDrawSize);
-                tileShape.setTexture(tileTextures[levelGrid[i][j]]);
-
-                // Scale the tile to 64x64
-                sf::Vector2u textureSize = tileShape.getTexture()->getSize();
-                tileShape.setScale(static_cast<float>(tileDrawSize) / textureSize.x, static_cast<float>(tileDrawSize) / textureSize.y);
-
-                tiles.push_back(tileShape);
-            }
-        }
-    }
-
-    levelFile.close();
+bool TileManager::isMouseInSidebar(sf::RenderWindow& window) {
+    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+    return mousePos.x >= window.getSize().x - 200;
 }
 
+void TileManager::draw(sf::RenderWindow& window) {
+    for (const auto& tile : tiles) {
+        window.draw(tile);
+    }
 
-void TileManager::toggleDebugMode() {
-    debugMode = !debugMode;
+    if (debugMode) {
+        drawGrid(window);
+    }
 }
 
 void TileManager::drawGrid(sf::RenderWindow& window) {
     sf::RectangleShape line;
     line.setFillColor(sf::Color::Green);
 
-    for (unsigned int x = 0; x < window.getSize().x; x += tileDrawSize) {  // tileDrawSize is 64
+    for (unsigned int x = 0; x < window.getSize().x; x += tileDrawSize) {
         line.setSize(sf::Vector2f(1, window.getSize().y));
         line.setPosition(static_cast<float>(x), 0);
         window.draw(line);
     }
 
-    for (unsigned int y = 0; y < window.getSize().y; y += tileDrawSize) {  // tileDrawSize is 64
+    for (unsigned int y = 0; y < window.getSize().y; y += tileDrawSize) {
         line.setSize(sf::Vector2f(window.getSize().x, 1));
         line.setPosition(0, static_cast<float>(y));
         window.draw(line);
     }
 }
 
-
 const std::vector<sf::RectangleShape>& TileManager::getPlacedTiles() const {
-    return tiles;  // Return the placed tiles for use in play mode
+    return tiles;
 }
 
