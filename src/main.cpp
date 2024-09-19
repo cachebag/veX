@@ -45,7 +45,7 @@ int main() {
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
     sf::Vector2u windowSize = window.getSize();
-    
+
     // Load font for orb counter and help text
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
@@ -53,8 +53,8 @@ int main() {
         return -1;
     }
 
-    Background background("assets/tutorial_level/background.png", 
-                          "assets/tutorial_level/middleground.png", 
+    Background background("assets/tutorial_level/background.png",
+                          "assets/tutorial_level/middleground.png",
                           "assets/tutorial_level/mountains.png", windowSize);
 
     // Clock for deltaTime
@@ -79,7 +79,7 @@ int main() {
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed || 
+            if (event.type == sf::Event::Closed ||
                 (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
                 window.close();
             }
@@ -94,19 +94,20 @@ int main() {
 
                     // Load the placed tiles from the level editor
                     const auto& placedTiles = tileManager.getPlacedTiles();
+                    const auto& tileTextures = tileManager.getTileTextures();
 
                     platforms.clear();  // Clear existing platforms
 
                     // Convert placed tiles into platforms
                     for (const auto& tile : placedTiles) {
-                        sf::Texture* texture = const_cast<sf::Texture*>(tile.getTexture());
-                        float x = tile.getPosition().x;
-                        float y = tile.getPosition().y;
-                        float width = tile.getSize().x;
-                        float height = tile.getSize().y;
+                        const sf::Texture& texture = tileTextures.at(tile.type);
+                        float x = tile.shape.getPosition().x;
+                        float y = tile.shape.getPosition().y;
+                        float width = tile.shape.getSize().x;
+                        float height = tile.shape.getSize().y;
 
                         // Create platform from tile
-                        platforms.emplace_back(x, y, width, height, *texture, windowSize);
+                        platforms.emplace_back(x, y, width, height, texture, windowSize);
                     }
 
                     // Reset the player to start position (e.g., top of first platform)
@@ -116,6 +117,15 @@ int main() {
                     }
 
                     helpText = createHelpText(font, currentMode);  // Update help text
+                }
+
+                // Handle saving and loading in Edit mode
+                if (currentMode == GameMode::Edit) {
+                    if (event.key.code == sf::Keyboard::S) {
+                        tileManager.saveLevel();
+                    } else if (event.key.code == sf::Keyboard::L) {
+                        tileManager.loadLevel();
+                    }
                 }
             }
 
@@ -134,8 +144,7 @@ int main() {
 
         float playerX = player->getGlobalBounds().left;
 
-        float deltaTime;
-        deltaTime = clock.restart().asSeconds();
+        float deltaTime = clock.restart().asSeconds();
 
         background.render(window, window.getSize(), playerX, deltaTime);
 

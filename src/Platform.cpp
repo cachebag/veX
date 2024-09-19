@@ -2,27 +2,22 @@
 #include <cmath>
 
 // Constructor initializes the platform and sets up tiled sections
-Platform::Platform(float x, float y, float width, float height, sf::Texture& texture, const sf::Vector2u& windowSize) {
-    // Enable texture repetition
-    texture.setRepeated(true);
-
+Platform::Platform(float x, float y, float width, float height, const sf::Texture& texture, const sf::Vector2u& windowSize) {
     // Calculate the number of tiles needed to cover the platform size
     float tileWidth = static_cast<float>(texture.getSize().x);
     float tileHeight = static_cast<float>(texture.getSize().y);
 
-    float platformWidth = width * windowSize.x;
-    float platformHeight = height * windowSize.y;
-
-    int numTilesX = static_cast<int>(std::ceil(platformWidth / tileWidth));
-    int numTilesY = static_cast<int>(std::ceil(platformHeight / tileHeight));
+    // Calculate how many times the texture should repeat over the platform dimensions
+    int numTilesX = static_cast<int>(std::ceil(width / tileWidth));
+    int numTilesY = static_cast<int>(std::ceil(height / tileHeight));
 
     // Create and position the tiles
     for (int i = 0; i < numTilesX; ++i) {
         for (int j = 0; j < numTilesY; ++j) {
             sf::RectangleShape tile(sf::Vector2f(tileWidth, tileHeight));
-            tile.setPosition(x * windowSize.x + i * tileWidth, y * windowSize.y + j * tileHeight);
+            tile.setPosition(x + i * tileWidth, y + j * tileHeight);
             tile.setTexture(&texture);
-
+            tile.setTextureRect(sf::IntRect(0, 0, static_cast<int>(tileWidth), static_cast<int>(tileHeight)));
             tiles.push_back(tile);  // Store each tile for later rendering
         }
     }
@@ -40,8 +35,8 @@ sf::FloatRect Platform::getBounds() const {
 
     float left = firstTileBounds.left;
     float top = firstTileBounds.top;
-    float width = lastTileBounds.left + lastTileBounds.width - left;
-    float height = lastTileBounds.top + lastTileBounds.height - top;
+    float width = (lastTileBounds.left + lastTileBounds.width) - left;
+    float height = (lastTileBounds.top + lastTileBounds.height) - top;
 
     return sf::FloatRect(left, top, width, height);
 }
