@@ -4,15 +4,40 @@
 #include <map>
 #include <string>
 
-const int tileDrawSize = 64;
+const int defaultTileDrawSize = 64;
 
-enum class TileType { None, Brick, BushLarge, BushSmall, SlimeBlock, Statue, Stone1, Stone2, Stone3, Stone4, Tree1, Tree2, Tree3, Rock };
+enum class TileType {
+    None,
+    Brick,
+    BushLarge,
+    BushSmall,
+    SlimeBlock,
+    Statue,
+    Stone1,
+    Stone2,
+    Stone3,
+    Stone4,
+    Tree1,
+    Tree2,
+    Tree3,
+    Rock
+};
+
+struct TileProperties {
+    bool isSolid;
+    sf::Vector2f size;
+    bool canBeResized;
+    TileProperties(bool solid = true, const sf::Vector2f& size = {defaultTileDrawSize, defaultTileDrawSize}, bool resize = false)
+        : isSolid(solid), size(size), canBeResized(resize) {}
+};
 
 class Tile {
 public:
     TileType type;
     sf::RectangleShape shape;
-    Tile(TileType type, const sf::Vector2f& position, const sf::Texture& texture);
+    TileProperties properties;
+
+    Tile(TileType type, const sf::Vector2f& position, const sf::Texture& texture, const TileProperties& properties);
 };
 
 class TileManager {
@@ -26,22 +51,23 @@ public:
     void saveLevel();
     void loadLevel();
     void toggleDebugMode();
-    void drawSidebar(sf::RenderWindow& window);
 
     const std::vector<Tile>& getPlacedTiles() const;
     const std::map<TileType, sf::Texture>& getTileTextures() const;
+    void setSelectedTile(TileType type);  // New function to set selected tile from Sidebar
 
 private:
     TileType selectedTile = TileType::Brick;
 
     std::map<TileType, sf::Texture> tileTextures;  // Store textures for each tile type
+    std::map<TileType, TileProperties> tileProperties;  // Store properties for each tile type
     std::vector<Tile> tiles;  // Store placed tiles
 
     bool debugMode = false;
-    const int tileSize = 64;
+    const int tileSize = defaultTileDrawSize;
     std::vector<std::vector<TileType>> levelGrid;
 
-    bool isMouseInSidebar(sf::RenderWindow& window);
     void drawGrid(sf::RenderWindow& window);
+    void setupTileProperties();  // Setup properties for different tiles
 };
 

@@ -8,6 +8,7 @@
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
 #include "../include/Background.hpp"
+#include "../include/SidebarManager.hpp"
 
 enum class GameMode { Play, Edit };
 
@@ -44,9 +45,10 @@ int main() {
     // Get desktop mode
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
+    sf::RenderWindow sidebarWindow(sf::VideoMode(200, 800), "Tile Selector", sf::Style::Default);
     sf::Vector2u windowSize = window.getSize();
 
-    // Load font for orb counter and help text
+    // Load font for help text
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
         std::cerr << "Error loading font." << std::endl;
@@ -62,6 +64,7 @@ int main() {
 
     // Create TileManager for the level editor
     TileManager tileManager;
+    SidebarManager sidebarManager(tileManager);
 
     // Create player using std::unique_ptr
     std::unique_ptr<Player> player = std::make_unique<Player>(0, 0);  // Initial position of player
@@ -76,12 +79,13 @@ int main() {
     sf::Text helpText = createHelpText(font, currentMode);
 
     // Main game loop
-    while (window.isOpen()) {
+    while (window.isOpen() && sidebarWindow.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed ||
                 (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
                 window.close();
+                sidebarWindow.close();
             }
 
             // Mode switching logic
@@ -140,6 +144,16 @@ int main() {
             }
         }
 
+        // Handle sidebar input
+        sf::Event sidebarEvent;
+        while (sidebarWindow.pollEvent(sidebarEvent)) {
+            if (sidebarEvent.type == sf::Event::Closed) {
+                sidebarWindow.close();
+            }
+
+            sidebarManager.handleInput(sidebarWindow);
+        }
+
         window.clear();
 
         float playerX = player->getGlobalBounds().left;
@@ -172,15 +186,15 @@ int main() {
 
             // Draw a preview of the currently selected tile
             tileManager.drawTilePreview(window);
-
-            // Draw the sidebar with tile selection and save/load buttons
-            tileManager.drawSidebar(window);
         }
 
         // Draw help text (controls)
         window.draw(helpText);
 
         window.display();
+
+        // Draw the sidebar
+        sidebarManager.draw(sidebarWindow);
     }
 
     return 0;
