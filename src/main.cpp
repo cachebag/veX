@@ -6,6 +6,7 @@
 #include <memory>  // For std::unique_ptr
 #include "../include/TileManager.hpp"
 #include "../include/Player.hpp"
+#include "../include/Enemy.hpp"
 #include "../include/Platform.hpp"
 #include "../include/Background.hpp"
 
@@ -80,9 +81,18 @@ int main() {
     std::unique_ptr<Player> player;
     if (!platforms.empty()) {
         float platformHeight = platforms.front().getTiles().front().getGlobalBounds().top;
-        player = std::make_unique<Player>(0, platformHeight - 100);  // Adjust position as needed
+        player = std::make_unique<Player>(500, platformHeight - 100);  // Adjust position as needed
     } else {
         player = std::make_unique<Player>(0, 50);  // Default position if no platforms found
+    }
+
+    // Create enemy using std::unique_ptr and place it at a desired position
+    std::unique_ptr<Enemy> enemy;
+    if (!platforms.empty()) {
+        float platformHeight = platforms.front().getTiles().front().getGlobalBounds().top;
+        enemy = std::make_unique<Enemy>(700, platformHeight - 100);  // Adjust position as needed
+    } else {
+        enemy = std::make_unique<Enemy>(0, 50);  // Default position if no platforms found
     }
 
     // Help text to show controls
@@ -100,9 +110,10 @@ int main() {
 
         window.clear();
 
-        float playerX = player->getGlobalBounds().left;
-
         float deltaTime = clock.restart().asSeconds();
+
+        // Get player X position for background parallax
+        float playerX = player->getGlobalBounds().left;
 
         background.render(window, window.getSize(), playerX, deltaTime);
 
@@ -111,6 +122,9 @@ int main() {
         // Update player movement and logic
         player->update(deltaTime, platforms, windowSize.x, windowSize.y);
 
+        // Update enemy movement and logic
+        enemy->update(deltaTime, platforms, windowSize.x, windowSize.y);
+
         // Draw the platforms
         for (auto& platform : platforms) {
             platform.draw(window);
@@ -118,6 +132,9 @@ int main() {
 
         // Draw the player
         player->draw(window);
+
+        // Draw the enemy
+        enemy->draw(window);
 
         // Draw help text (controls)
         window.draw(helpText);
