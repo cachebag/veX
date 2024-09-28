@@ -4,7 +4,7 @@
 
 class Platform {
 public:
-    Platform(float x, float y, float width, float height, const sf::Texture& texture, const sf::Vector2u& windowSize);
+    Platform(float x, float y, float width, float height, const sf::Texture& texture);
 
     void draw(sf::RenderWindow& window);  // Draws the tiled platform
     sf::FloatRect getBounds() const;      // Get the bounding box of the platform

@@ -2,7 +2,7 @@
 #include <cmath>
 
 // Constructor initializes the platform and sets up tiled sections
-Platform::Platform(float x, float y, float width, float height, const sf::Texture& texture, const sf::Vector2u& windowSize) {
+Platform::Platform(float x, float y, float width, float height, const sf::Texture& texture) {
     // Calculate the number of tiles needed to cover the platform size
     float tileWidth = static_cast<float>(texture.getSize().x);
     float tileHeight = static_cast<float>(texture.getSize().y);

@@ -47,18 +47,18 @@ void TileManager::loadTextures() {
 // Setup tile properties for different tile types
 void TileManager::setupTileProperties() {
     tileProperties[TileType::Brick] = TileProperties(true, {64, 64}, false);
-    tileProperties[TileType::BushLarge] = TileProperties(false, {128, 128}, false);
-    tileProperties[TileType::BushSmall] = TileProperties(false, {64, 64}, false);
+    tileProperties[TileType::BushLarge] = TileProperties(false, {76, 65}, false);
+    tileProperties[TileType::BushSmall] = TileProperties(false, {34, 29}, false);
     tileProperties[TileType::SlimeBlock] = TileProperties(true, {64, 64}, true);
-    tileProperties[TileType::Statue] = TileProperties(true, {64, 128}, false);
-    tileProperties[TileType::Stone1] = TileProperties(true, {64, 64}, true);
-    tileProperties[TileType::Stone2] = TileProperties(true, {64, 64}, true);
-    tileProperties[TileType::Stone3] = TileProperties(true, {64, 64}, true);
-    tileProperties[TileType::Stone4] = TileProperties(true, {64, 64}, true);
-    tileProperties[TileType::Tree1] = TileProperties(false, {64, 192}, false);
-    tileProperties[TileType::Tree2] = TileProperties(false, {64, 192}, false);
+    tileProperties[TileType::Statue] = TileProperties(true, {63, 75}, false);
+    tileProperties[TileType::Stone1] = TileProperties(true, {27, 39}, true);
+    tileProperties[TileType::Stone2] = TileProperties(true, {27, 40}, true);
+    tileProperties[TileType::Stone3] = TileProperties(true, {27, 33}, true);
+    tileProperties[TileType::Stone4] = TileProperties(true, {19, 38}, true);
+    tileProperties[TileType::Tree1] = TileProperties(false, {166, 117}, false);
+    tileProperties[TileType::Tree2] = TileProperties(false, {166, 117}, false);
     tileProperties[TileType::Tree3] = TileProperties(false, {64, 192}, false);
-    tileProperties[TileType::Rock] = TileProperties(true, {64, 64}, false);
+    tileProperties[TileType::Rock] = TileProperties(true, {176, 171}, false);
 }
 
 // Save the level to a file
@@ -223,5 +223,43 @@ const std::vector<Tile>& TileManager::getPlacedTiles() const {
 // Get the tile textures
 const std::map<TileType, sf::Texture>& TileManager::getTileTextures() const {
     return tileTextures;
+}
+
+#include "../include/TileManager.hpp"
+#include <fstream>
+#include <iostream>
+
+// Implementation of loadLevelFromFile
+bool TileManager::loadLevelFromFile(const std::string& filePath) {
+    std::ifstream levelFile(filePath);
+    if (!levelFile) {
+        std::cerr << "Error loading level from file: " << filePath << std::endl;
+        return false;
+    }
+
+    int tileType;
+    tiles.clear();  // Clear existing tiles
+
+    for (size_t i = 0; i < levelGrid.size(); ++i) {
+        for (size_t j = 0; j < levelGrid[i].size(); ++j) {
+            if (!(levelFile >> tileType)) {
+                std::cerr << "Error reading level file: " << filePath << std::endl;
+                return false;  // Error if reading fails
+            }
+            levelGrid[i][j] = static_cast<TileType>(tileType);
+
+            if (levelGrid[i][j] != TileType::None) {
+                sf::Vector2f position(static_cast<float>(i * tileSize), static_cast<float>(j * tileSize));
+                const sf::Texture& texture = tileTextures[levelGrid[i][j]];
+                const TileProperties& properties = tileProperties[levelGrid[i][j]];
+
+                // Create a new Tile object
+                tiles.emplace_back(levelGrid[i][j], position, texture, properties);
+            }
+        }
+    }
+
+    std::cout << "Level loaded from file: " << filePath << std::endl;
+    return true;
 }
 

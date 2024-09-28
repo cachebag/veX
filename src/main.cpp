@@ -8,35 +8,22 @@
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
 #include "../include/Background.hpp"
-#include "../include/SidebarManager.hpp"
 
-enum class GameMode { Play, Edit };
+enum class GameMode { Play };
 
-// Function to create help text based on current mode
-sf::Text createHelpText(const sf::Font& font, GameMode mode) {
+// Function to create help text for gameplay
+sf::Text createHelpText(const sf::Font& font) {
     sf::Text helpText;
     helpText.setFont(font);
     helpText.setCharacterSize(24);
     helpText.setFillColor(sf::Color::White);
     helpText.setPosition(20.0f, 20.0f);
 
-    if (mode == GameMode::Play) {
-        helpText.setString(
-            "Play Mode\n"
-            "WASD to move, Space to jump\n"
-            "Press E to switch to Edit Mode\n"
-            "Press ESC to quit"
-        );
-    } else if (mode == GameMode::Edit) {
-        helpText.setString(
-            "Edit Mode\n"
-            "Left Click to place tile\n"
-            "Press S to save | Press L to load\n"
-            "Press P to switch to Play Mode\n"
-            "Press D to toggle debug (grid)\n"
-            "Press ESC to quit"
-        );
-    }
+    /*helpText.setString(
+        "Play Mode\n"
+        "WASD to move, Space to jump\n"
+        "Press ESC to quit"
+    );*/
 
     return helpText;
 }
@@ -45,7 +32,6 @@ int main() {
     // Get desktop mode
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
-    sf::RenderWindow sidebarWindow(sf::VideoMode(200, 800), "Tile Selector", sf::Style::Default);
     sf::Vector2u windowSize = window.getSize();
 
     // Load font for help text
@@ -62,96 +48,54 @@ int main() {
     // Clock for deltaTime
     sf::Clock clock;
 
-    // Create TileManager for the level editor
+    // Create TileManager for loading the level
     TileManager tileManager;
-    SidebarManager sidebarManager(tileManager);
 
-    // Create player using std::unique_ptr
-    std::unique_ptr<Player> player = std::make_unique<Player>(0, 0);  // Initial position of player
+    // Load the initial level from the "levels/level1.txt" file
+    if (!tileManager.loadLevelFromFile("levels/level1.txt")) {
+        std::cerr << "Error loading level." << std::endl;
+        return -1;
+    }
 
     // Platforms for Play Mode
     std::vector<Platform> platforms;
 
-    // Set initial mode to Play Mode
-    GameMode currentMode = GameMode::Play;
+    // Load the placed tiles from the level file
+    const auto& placedTiles = tileManager.getPlacedTiles();
+    const auto& tileTextures = tileManager.getTileTextures();
+
+    // Convert placed tiles into platforms
+    for (const auto& tile : placedTiles) {
+        const sf::Texture& texture = tileTextures.at(tile.type);
+        float x = tile.shape.getPosition().x;
+        float y = tile.shape.getPosition().y;
+        float width = tile.shape.getSize().x;
+        float height = tile.shape.getSize().y;
+
+        // Create platform from tile
+        platforms.emplace_back(x, y, width, height, texture);
+    }
+
+    // Create player using std::unique_ptr and place it at the start position
+    std::unique_ptr<Player> player;
+    if (!platforms.empty()) {
+        float platformHeight = platforms.front().getTiles().front().getGlobalBounds().top;
+        player = std::make_unique<Player>(0, platformHeight - 100);  // Adjust position as needed
+    } else {
+        player = std::make_unique<Player>(0, 50);  // Default position if no platforms found
+    }
 
     // Help text to show controls
-    sf::Text helpText = createHelpText(font, currentMode);
+    sf::Text helpText = createHelpText(font);
 
     // Main game loop
-    while (window.isOpen() && sidebarWindow.isOpen()) {
+    while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed ||
                 (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
                 window.close();
-                sidebarWindow.close();
             }
-
-            // Mode switching logic
-            if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::E) {
-                    currentMode = GameMode::Edit;  // Switch to editor mode
-                    helpText = createHelpText(font, currentMode);  // Update help text
-                } else if (event.key.code == sf::Keyboard::P) {
-                    currentMode = GameMode::Play;  // Switch to play mode
-
-                    // Load the placed tiles from the level editor
-                    const auto& placedTiles = tileManager.getPlacedTiles();
-                    const auto& tileTextures = tileManager.getTileTextures();
-
-                    platforms.clear();  // Clear existing platforms
-
-                    // Convert placed tiles into platforms
-                    for (const auto& tile : placedTiles) {
-                        const sf::Texture& texture = tileTextures.at(tile.type);
-                        float x = tile.shape.getPosition().x;
-                        float y = tile.shape.getPosition().y;
-                        float width = tile.shape.getSize().x;
-                        float height = tile.shape.getSize().y;
-
-                        // Create platform from tile
-                        platforms.emplace_back(x, y, width, height, texture, windowSize);
-                    }
-
-                    // Reset the player to start position (e.g., top of first platform)
-                    if (!platforms.empty()) {
-                        float platformHeight = platforms.front().getTiles().front().getGlobalBounds().top;
-                        player = std::make_unique<Player>(0, platformHeight - player->getGlobalBounds().height);
-                    }
-
-                    helpText = createHelpText(font, currentMode);  // Update help text
-                }
-
-                // Handle saving and loading in Edit mode
-                if (currentMode == GameMode::Edit) {
-                    if (event.key.code == sf::Keyboard::S) {
-                        tileManager.saveLevel();
-                    } else if (event.key.code == sf::Keyboard::L) {
-                        tileManager.loadLevel();
-                    }
-                }
-            }
-
-            // Debug mode toggle (for grid lines, etc.)
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::D) {
-                tileManager.toggleDebugMode();
-            }
-
-            // Handle tile placement in Edit mode
-            if (currentMode == GameMode::Edit) {
-                tileManager.handleInput(window);
-            }
-        }
-
-        // Handle sidebar input
-        sf::Event sidebarEvent;
-        while (sidebarWindow.pollEvent(sidebarEvent)) {
-            if (sidebarEvent.type == sf::Event::Closed) {
-                sidebarWindow.close();
-            }
-
-            sidebarManager.handleInput(sidebarWindow);
         }
 
         window.clear();
@@ -162,39 +106,23 @@ int main() {
 
         background.render(window, window.getSize(), playerX, deltaTime);
 
-        // Handle the two game modes
-        if (currentMode == GameMode::Play) {
-            // **Play Mode Logic**
+        // **Play Mode Logic**
 
-            // Update player movement and logic
-            player->update(deltaTime, platforms, windowSize.x, windowSize.y);
+        // Update player movement and logic
+        player->update(deltaTime, platforms, windowSize.x, windowSize.y);
 
-            // Draw the platforms
-            for (auto& platform : platforms) {
-                platform.draw(window);
-            }
-
-            // Draw the player
-            player->draw(window);
-
-        } else if (currentMode == GameMode::Edit) {
-            // **Editor Mode Logic**
-            clock.restart();  // Reset clock to avoid sudden jumps in play mode
-
-            // Draw the tiles in the editor
-            tileManager.draw(window);
-
-            // Draw a preview of the currently selected tile
-            tileManager.drawTilePreview(window);
+        // Draw the platforms
+        for (auto& platform : platforms) {
+            platform.draw(window);
         }
+
+        // Draw the player
+        player->draw(window);
 
         // Draw help text (controls)
         window.draw(helpText);
 
         window.display();
-
-        // Draw the sidebar
-        sidebarManager.draw(sidebarWindow);
     }
 
     return 0;

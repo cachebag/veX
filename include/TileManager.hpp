@@ -52,6 +52,7 @@ public:
     void loadLevel();
     void toggleDebugMode();
 
+    bool loadLevelFromFile(const std::string& filePath);
     const std::vector<Tile>& getPlacedTiles() const;
     const std::map<TileType, sf::Texture>& getTileTextures() const;
     void setSelectedTile(TileType type);  // New function to set selected tile from Sidebar
