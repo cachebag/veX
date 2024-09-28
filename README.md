@@ -8,13 +8,12 @@
 - [X] Collision detection
 - [ ] Sprite art for character(s)
   - [X] Main Character
-  - [ ] Enemies
+  - [X] Enemies (One finished so far)
   - [ ] Boss
 - [ ] Core game mechanics
-  - [ ] Level Passthrough
   - [ ] Death system
   - [ ] Rage meter
-  - [ ] PvE
+  - [ ] Enemy waves
   - [ ] Weapon
 - [ ] Finish animation for main player
   - [X]  Jumping
@@ -25,12 +24,9 @@
 - [ ] Level editor
   - [X] Create and delete tiles, platforms, etc
   - [X] Load levels to edit
-  - [ ] GUI for loading and saving levels 
+  - [X] GUI for loading and saving levels 
 - [ ] Design initial tutorial level
-  - [ ] Platforms
-  - [ ] Backdrop
+  - [X] Platforms
+  - [X] Backdrop
   - [ ] Interactive Elements
 ---
-
-### Notes
-- Next steps include refining level editor for more detailed customization, better debugging and designing more art
