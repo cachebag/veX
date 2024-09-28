@@ -3,7 +3,7 @@
 #include <iostream>
 
 // Constructor
-Enemy::Enemy(float startX, float startY) 
+Enemy::Enemy(float startX, float startY)
     : x(startX), y(startY), 
       yVelocity(0.0f), gravity(0.0f), terminalVelocity(1000.0f),
       speedX(100.0f),
@@ -11,14 +11,24 @@ Enemy::Enemy(float startX, float startY)
       currentState(EnemyState::PATROLLING),
       patrolStartX(startX - 100.0f),
       patrolEndX(startX + 100.0f),
-      aggroRange(300.0f)
+      aggroRange(300.0f),
+      currentFrameIndex(0),
+      animationTimer(0.0f),
+      frameDuration(0.1f),
+      isIdle(true)
 {
     // Load the idle texture
     if (!idleTexture.loadFromFile("assets/characters/enemies/wrathborn.png")) {
         std::cerr << "Error loading idle texture file" << std::endl;
     }
+    if (!walkingTexture.loadFromFile("assets/characters/enemies/wrathborn_sprite_sheet.png")) {
+	    std::cerr << "Error loading walkikng texture file" << std::endl;
+    }
     // Set the initial texture to idle
     sprite.setTexture(idleTexture);
+
+    currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);
+    sprite.setTextureRect(currentFrame);
 
     // Set initial sprite position and scale (if needed)
     sprite.setPosition(x, y);
@@ -27,6 +37,17 @@ Enemy::Enemy(float startX, float startY)
 
 void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
     (void)platforms; // Suppress unused parameter warning
+    
+    animationTimer += deltaTime;
+
+    if (animationTimer >= frameDuration) {
+        currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
+        currentFrame.left = currentFrameIndex * frameWidth;  // Move horizontally through the sprite sheet
+        sprite.setTextureRect(currentFrame);  // Apply the new frame to the sprite
+        animationTimer = 0.0f;
+
+    }
+
     switch (currentState) {
         case EnemyState::IDLE:
             // For now, do nothing
@@ -41,6 +62,7 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int 
             // For now, do nothing
             break;
     }
+    sprite.setPosition(x, y);
     move(deltaTime, platforms, windowWidth, windowHeight);
 }
 
@@ -70,9 +92,11 @@ void Enemy::updatePatrolling(float deltaTime) {
     if (x <= patrolStartX) {
         x = patrolStartX;
         speedX = std::abs(speedX); // Move right
+	sprite.setTexture(walkingTexture);
     } else if (x >= patrolEndX) {
         x = patrolEndX;
         speedX = -std::abs(speedX); // Move left
+	sprite.setTexture(walkingTexture);
     }
     x += speedX * deltaTime;
 }

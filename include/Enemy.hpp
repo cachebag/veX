@@ -23,8 +23,20 @@ private:
 
     int orbCount; // Number of orbs collected (if applicable)
 
+    sf::Texture walkingTexture;
     sf::Texture idleTexture; // Texture for idle animation
-    sf::Sprite sprite; // Sprite to represent the enemy
+    sf::Sprite sprite;
+    sf::IntRect currentFrame;
+
+    int currentFrameIndex;
+    float animationTimer;
+    float frameDuration;
+    bool isIdle;
+
+    const int frameWidth = 64;
+    const int frameHeight = 64;
+    int totalFrames = 3;
+    const int idleTotalFrames = 3;
 
     enum class EnemyState {
         IDLE,
@@ -37,6 +49,7 @@ private:
     float patrolStartX, patrolEndX; // Patrol boundaries
     float aggroRange; // Range to start chasing the player
 
+    void resetAnimation();
     void changeState(EnemyState newState);
     void updatePatrolling(float deltaTime);
     void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
