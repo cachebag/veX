@@ -2,7 +2,6 @@
 #include "../include/Platform.hpp"
 #include <iostream>
 
-// Constructor
 Enemy::Enemy(float startX, float startY)
     : x(startX), y(startY), 
       yVelocity(0.0f), gravity(0.0f), terminalVelocity(1000.0f),
@@ -17,49 +16,42 @@ Enemy::Enemy(float startX, float startY)
       frameDuration(0.1f),
       isIdle(true)
 {
-    // Load the idle texture
     if (!idleTexture.loadFromFile("assets/characters/enemies/wrathborn.png")) {
         std::cerr << "Error loading idle texture file" << std::endl;
     }
     if (!walkingTexture.loadFromFile("assets/characters/enemies/wrathborn_sprite_sheet.png")) {
 	    std::cerr << "Error loading walkikng texture file" << std::endl;
     }
-    // Set the initial texture to idle
     sprite.setTexture(idleTexture);
 
     currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);
     sprite.setTextureRect(currentFrame);
 
-    // Set initial sprite position and scale (if needed)
     sprite.setPosition(x, y);
-    sprite.setScale(2.0f, 2.0f);  // Scale to make the character larger if needed
+    sprite.setScale(2.0f, 2.0f);
 }
 
 void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
-    (void)platforms; // Suppress unused parameter warning
+    (void)platforms;
     
     animationTimer += deltaTime;
 
     if (animationTimer >= frameDuration) {
         currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
-        currentFrame.left = currentFrameIndex * frameWidth;  // Move horizontally through the sprite sheet
-        sprite.setTextureRect(currentFrame);  // Apply the new frame to the sprite
+        currentFrame.left = currentFrameIndex * frameWidth;
+        sprite.setTextureRect(currentFrame);
         animationTimer = 0.0f;
-
     }
 
     switch (currentState) {
         case EnemyState::IDLE:
-            // For now, do nothing
             break;
         case EnemyState::PATROLLING:
             updatePatrolling(deltaTime);
             break;
         case EnemyState::AGGRO:
-            // For now, do nothing
             break;
         case EnemyState::ATTACKING:
-            // For now, do nothing
             break;
     }
     sprite.setPosition(x, y);
@@ -67,11 +59,11 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int 
 }
 
 void Enemy::draw(sf::RenderWindow& window) const {
-    window.draw(sprite); // Draw the enemy sprite
+    window.draw(sprite);
 }
 
 sf::FloatRect Enemy::getGlobalBounds() const {
-    return sprite.getGlobalBounds(); // Return the global bounds of the sprite
+    return sprite.getGlobalBounds();
 }
 
 void Enemy::collectOrb() {
@@ -84,45 +76,40 @@ int Enemy::getOrbCount() const {
 
 void Enemy::changeState(EnemyState newState) {
     currentState = newState;
-    // Reset state-specific logic if needed (e.g., timers or animations)
 }
 
 void Enemy::updatePatrolling(float deltaTime) {
-    // Move left and right within patrol boundaries
     if (x <= patrolStartX) {
         x = patrolStartX;
-        speedX = std::abs(speedX); // Move right
-	sprite.setTexture(walkingTexture);
+        speedX = std::abs(speedX);
+	    sprite.setTexture(walkingTexture);
     } else if (x >= patrolEndX) {
         x = patrolEndX;
-        speedX = -std::abs(speedX); // Move left
-	sprite.setTexture(walkingTexture);
+        speedX = -std::abs(speedX);
+	    sprite.setTexture(walkingTexture);
     }
     x += speedX * deltaTime;
 }
 
 void Enemy::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
-    (void)deltaTime;   // Suppress unused parameter warning
-    (void)platforms;   // Suppress unused parameter warning
-    (void)windowHeight; // Suppress unused parameter warning
+    (void)deltaTime;
+    (void)platforms;
+    (void)windowHeight;
 
-    // Update sprite's position
     sprite.setPosition(x, y);
     boundDetection(windowWidth, windowHeight);
 }
 
 void Enemy::boundDetection(int windowWidth, int windowHeight) {
-    (void)windowHeight; // Suppress unused parameter warning
+    (void)windowHeight;
 
-    // Check bounds within the window
     if (x < 0) {
         x = 0;
-        speedX = std::abs(speedX); // Move right
+        speedX = std::abs(speedX);
     }
     if (x + sprite.getGlobalBounds().width > windowWidth) {
         x = windowWidth - sprite.getGlobalBounds().width;
-        speedX = -std::abs(speedX); // Move left
+        speedX = -std::abs(speedX);
     }
-    // Implement additional vertical bounds if necessary
 }
 

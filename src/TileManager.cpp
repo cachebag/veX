@@ -3,7 +3,6 @@
 #include <iostream>
 #include "../include/nfd.h"
 
-// Tile Constructor
 Tile::Tile(TileType type, const sf::Vector2f& position, const sf::Texture& texture, const TileProperties& properties)
     : type(type), properties(properties) {
     shape.setSize(properties.size);
@@ -11,16 +10,13 @@ Tile::Tile(TileType type, const sf::Vector2f& position, const sf::Texture& textu
     shape.setTexture(&texture);
 }
 
-// TileManager Constructor
 TileManager::TileManager() {
     loadTextures();
     setupTileProperties();
-    levelGrid.resize(100, std::vector<TileType>(100, TileType::None));  // 100x100 grid for tile placement
+    levelGrid.resize(100, std::vector<TileType>(100, TileType::None));
 }
 
-// Load all tile textures
 void TileManager::loadTextures() {
-    // Load each texture and associate it with a TileType
     std::map<TileType, std::string> textureFiles = {
         {TileType::Brick, "assets/tutorial_level/brick.png"},
         {TileType::BushLarge, "assets/tutorial_level/bush-large.png"},
@@ -44,7 +40,6 @@ void TileManager::loadTextures() {
     }
 }
 
-// Setup tile properties for different tile types
 void TileManager::setupTileProperties() {
     tileProperties[TileType::Brick] = TileProperties(true, {64, 64}, false);
     tileProperties[TileType::BushLarge] = TileProperties(false, {76, 65}, false);
@@ -61,7 +56,6 @@ void TileManager::setupTileProperties() {
     tileProperties[TileType::Rock] = TileProperties(true, {176, 171}, false);
 }
 
-// Save the level to a file
 void TileManager::saveLevel() {
     nfdchar_t* savePath = nullptr;
     nfdresult_t result = NFD_SaveDialog("txt", nullptr, &savePath);
@@ -90,7 +84,6 @@ void TileManager::saveLevel() {
     }
 }
 
-// Load a level from a file
 void TileManager::loadLevel() {
     nfdchar_t* loadPath = nullptr;
     nfdresult_t result = NFD_OpenDialog("txt", nullptr, &loadPath);
@@ -103,7 +96,7 @@ void TileManager::loadLevel() {
         }
 
         int tileType;
-        tiles.clear();  // Clear existing tiles
+        tiles.clear();
 
         for (size_t i = 0; i < levelGrid.size(); ++i) {
             for (size_t j = 0; j < levelGrid[i].size(); ++j) {
@@ -115,7 +108,6 @@ void TileManager::loadLevel() {
                     const sf::Texture& texture = tileTextures[levelGrid[i][j]];
                     const TileProperties& properties = tileProperties[levelGrid[i][j]];
 
-                    // Create a new Tile object
                     tiles.emplace_back(levelGrid[i][j], position, texture, properties);
                 }
             }
@@ -131,12 +123,10 @@ void TileManager::loadLevel() {
     }
 }
 
-// Toggle debug mode to show grid lines
 void TileManager::toggleDebugMode() {
     debugMode = !debugMode;
 }
 
-// Draw the grid lines for the level editor
 void TileManager::drawGrid(sf::RenderWindow& window) {
     sf::RectangleShape line;
     line.setFillColor(sf::Color::Green);
@@ -154,13 +144,10 @@ void TileManager::drawGrid(sf::RenderWindow& window) {
     }
 }
 
-// Handle user input for placing/removing tiles
 void TileManager::handleInput(sf::RenderWindow& window) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     int gridX = mousePos.x / tileSize;
     int gridY = mousePos.y / tileSize;
-
-    // Remove sidebar restriction check
 
     if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
         if (gridX >= 0 && gridY >= 0 && static_cast<size_t>(gridX) < levelGrid.size() && static_cast<size_t>(gridY) < levelGrid[0].size()) {
@@ -170,7 +157,6 @@ void TileManager::handleInput(sf::RenderWindow& window) {
             const sf::Texture& texture = tileTextures[selectedTile];
             const TileProperties& properties = tileProperties[selectedTile];
 
-            // Create a new Tile object
             tiles.emplace_back(selectedTile, position, texture, properties);
         }
     }
@@ -184,13 +170,11 @@ void TileManager::handleInput(sf::RenderWindow& window) {
             if (it != tiles.end()) {
                 tiles.erase(it, tiles.end());
             }
-
             levelGrid[gridX][gridY] = TileType::None;
         }
     }
 }
 
-// Draw a preview of the currently selected tile under the mouse cursor
 void TileManager::drawTilePreview(sf::RenderWindow& window) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     sf::RectangleShape preview(sf::Vector2f(static_cast<float>(tileSize), static_cast<float>(tileSize)));
@@ -199,12 +183,10 @@ void TileManager::drawTilePreview(sf::RenderWindow& window) {
     window.draw(preview);
 }
 
-// Set the currently selected tile from Sidebar
 void TileManager::setSelectedTile(TileType type) {
     selectedTile = type;
 }
 
-// Draw all the tiles placed on the level
 void TileManager::draw(sf::RenderWindow& window) {
     for (const auto& tile : tiles) {
         window.draw(tile.shape);
@@ -215,21 +197,14 @@ void TileManager::draw(sf::RenderWindow& window) {
     }
 }
 
-// Get the placed tiles
 const std::vector<Tile>& TileManager::getPlacedTiles() const {
     return tiles;
 }
 
-// Get the tile textures
 const std::map<TileType, sf::Texture>& TileManager::getTileTextures() const {
     return tileTextures;
 }
 
-#include "../include/TileManager.hpp"
-#include <fstream>
-#include <iostream>
-
-// Implementation of loadLevelFromFile
 bool TileManager::loadLevelFromFile(const std::string& filePath) {
     std::ifstream levelFile(filePath);
     if (!levelFile) {
@@ -238,13 +213,13 @@ bool TileManager::loadLevelFromFile(const std::string& filePath) {
     }
 
     int tileType;
-    tiles.clear();  // Clear existing tiles
+    tiles.clear();
 
     for (size_t i = 0; i < levelGrid.size(); ++i) {
         for (size_t j = 0; j < levelGrid[i].size(); ++j) {
             if (!(levelFile >> tileType)) {
                 std::cerr << "Error reading level file: " << filePath << std::endl;
-                return false;  // Error if reading fails
+                return false;
             }
             levelGrid[i][j] = static_cast<TileType>(tileType);
 
@@ -253,7 +228,6 @@ bool TileManager::loadLevelFromFile(const std::string& filePath) {
                 const sf::Texture& texture = tileTextures[levelGrid[i][j]];
                 const TileProperties& properties = tileProperties[levelGrid[i][j]];
 
-                // Create a new Tile object
                 tiles.emplace_back(levelGrid[i][j], position, texture, properties);
             }
         }

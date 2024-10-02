@@ -1,7 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
-#include "Platform.hpp" // Include Platform class for collision detection
+#include "Platform.hpp"
 
 class Player {
 public:
@@ -15,36 +15,36 @@ public:
     int getOrbCount() const;
 
 private:
-    float x, y; // Player position
-    float yVelocity; // Player vertical velocity
-    const float gravity; // Gravity applied to the player
-    const float terminalVelocity; // Maximum falling speed
-    const float speedX; // Horizontal movement speed
-    const float jumpVelocity; // Jump strength
+    float x, y;
+    float yVelocity;
+    const float gravity;
+    const float terminalVelocity;
+    const float speedX;
+    const float jumpVelocity;
 
-    int jumpCount; // Tracks how many jumps have been used
-    const int maxJumps; // Maximum number of jumps (e.g., for double jump)
-    const float fallMultiplier; // Speed multiplier when falling
-    const float lowJumpMultiplier; // Jump height control
+    int jumpCount;
+    const int maxJumps;
+    const float fallMultiplier;
+    const float lowJumpMultiplier;
 
-    int orbCount; // Number of orbs collected by the player
+    int orbCount;
 
-    sf::Texture walkingTexture; // Texture for walking animation
-    sf::Texture idleTexture; // Texture for idle animation
-    sf::Texture jumpTexture; // Texture for jumping
-    sf::Sprite sprite; // Sprite to represent the player
-    sf::IntRect currentFrame; // Current animation frame (position and size)
+    sf::Texture walkingTexture;
+    sf::Texture idleTexture;
+    sf::Texture jumpTexture;
+    sf::Sprite sprite;
+    sf::IntRect currentFrame;
 
-    int currentFrameIndex; // Current frame index
-    float animationTimer; // Time elapsed since last frame change
-    float frameDuration; // Time between each frame change
-    bool isIdle; // Indicates if the player is idle or moving
+    int currentFrameIndex;
+    float animationTimer;
+    float frameDuration;
+    bool isIdle;
     bool canJump;
     bool isJumping;
 
-    const int frameWidth = 32; // Width of each frame in the sprite sheet
-    const int frameHeight = 32; // Height of each frame in the sprite sheet
-    int totalFrames = 3; // Number of frames in the animation
+    const int frameWidth = 32;
+    const int frameHeight = 32;
+    int totalFrames = 3;
     const int idleTotalFrames = 3;
 
     void handleInput(float deltaTime);

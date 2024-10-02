@@ -1,7 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
-#include "Platform.hpp" // Include Platform class for collision detection
+#include "Platform.hpp" 
 
 class Enemy {
 public:
@@ -15,16 +15,16 @@ public:
     int getOrbCount() const;
 
 private:
-    float x, y; // Enemy position
-    float yVelocity; // Vertical velocity (if needed)
-    const float gravity; // Gravity (optional for some enemies)
-    const float terminalVelocity; // Maximum falling speed (if applicable)
-    float speedX; // Horizontal movement speed
+    float x, y; 
+    float yVelocity; 
+    const float gravity; 
+    const float terminalVelocity; 
+    float speedX; 
 
-    int orbCount; // Number of orbs collected (if applicable)
+    int orbCount; 
 
     sf::Texture walkingTexture;
-    sf::Texture idleTexture; // Texture for idle animation
+    sf::Texture idleTexture; 
     sf::Sprite sprite;
     sf::IntRect currentFrame;
 
@@ -45,9 +45,9 @@ private:
         ATTACKING
     };
 
-    EnemyState currentState; // Current state of the enemy
-    float patrolStartX, patrolEndX; // Patrol boundaries
-    float aggroRange; // Range to start chasing the player
+    EnemyState currentState; 
+    float patrolStartX, patrolEndX; 
+    float aggroRange; 
 
     void resetAnimation();
     void changeState(EnemyState newState);

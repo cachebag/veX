@@ -55,20 +55,20 @@ public:
     bool loadLevelFromFile(const std::string& filePath);
     const std::vector<Tile>& getPlacedTiles() const;
     const std::map<TileType, sf::Texture>& getTileTextures() const;
-    void setSelectedTile(TileType type);  // New function to set selected tile from Sidebar
+    void setSelectedTile(TileType type);  
 
 private:
     TileType selectedTile = TileType::Brick;
 
-    std::map<TileType, sf::Texture> tileTextures;  // Store textures for each tile type
-    std::map<TileType, TileProperties> tileProperties;  // Store properties for each tile type
-    std::vector<Tile> tiles;  // Store placed tiles
+    std::map<TileType, sf::Texture> tileTextures;  
+    std::map<TileType, TileProperties> tileProperties;  
+    std::vector<Tile> tiles;  
 
     bool debugMode = false;
     const int tileSize = defaultTileDrawSize;
     std::vector<std::vector<TileType>> levelGrid;
 
     void drawGrid(sf::RenderWindow& window);
-    void setupTileProperties();  // Setup properties for different tiles
+    void setupTileProperties();  
 };
 
