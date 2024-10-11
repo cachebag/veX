@@ -23,8 +23,12 @@ sf::Text createHelpText(const sf::Font& font) {
 
 int main() {
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
-    sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
+    sf::RenderWindow window(desktopMode, "veX", sf::Style::Fullscreen);
     sf::Vector2u windowSize = window.getSize();
+
+    // Adjust the view for scaling
+    sf::View view(sf::FloatRect(0, 0, static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)));
+    window.setView(view);
 
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
@@ -50,12 +54,16 @@ int main() {
     const auto& placedTiles = tileManager.getPlacedTiles();
     const auto& tileTextures = tileManager.getTileTextures();
 
+    // Scale platform tiles relative to window size
+    float scaleFactorX = static_cast<float>(windowSize.x) / 1920.0f;  // Example: 1920 is reference width
+    float scaleFactorY = static_cast<float>(windowSize.y) / 1080.0f;  // Example: 1080 is reference height
+
     for (const auto& tile : placedTiles) {
         const sf::Texture& texture = tileTextures.at(tile.type);
-        float x = tile.shape.getPosition().x;
-        float y = tile.shape.getPosition().y;
-        float width = tile.shape.getSize().x;
-        float height = tile.shape.getSize().y;
+        float x = tile.shape.getPosition().x * scaleFactorX;
+        float y = tile.shape.getPosition().y * scaleFactorY;
+        float width = tile.shape.getSize().x * scaleFactorX;
+        float height = tile.shape.getSize().y * scaleFactorY;
 
         platforms.emplace_back(x, y, width, height, texture);
     }
@@ -63,18 +71,15 @@ int main() {
     std::unique_ptr<Player> player;
     if (!platforms.empty()) {
         float platformHeight = platforms.front().getTiles().front().getGlobalBounds().top;
-        player = std::make_unique<Player>(500, platformHeight - 100);
+        player = std::make_unique<Player>(500 * scaleFactorX, platformHeight - 100);
     } else {
-        player = std::make_unique<Player>(0, 50);
+        player = std::make_unique<Player>(0 * scaleFactorX, 50 * scaleFactorY);
     }
 
-    std::unique_ptr<Enemy> enemy;
-    if (!platforms.empty()) {
-        float platformHeight = platforms.front().getTiles().front().getGlobalBounds().top;
-        enemy = std::make_unique<Enemy>(700, platformHeight - 100);
-    } else {
-        enemy = std::make_unique<Enemy>(0, 50);
-    }
+    // Position the enemy in the center of the screen
+    float enemyStartX = windowSize.x / 2.0f;  // Centered horizontally
+    float enemyStartY = windowSize.y / 2.0f - 100;  // Adjust Y to float a bit above the ground level
+    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(enemyStartX, enemyStartY);
 
     sf::Text helpText = createHelpText(font);
 
@@ -85,6 +90,23 @@ int main() {
                 (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
                 window.close();
             }
+
+            // Handle resizing
+            if (event.type == sf::Event::Resized) {
+                windowSize = window.getSize();
+                sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
+                view = sf::View(visibleArea);
+                window.setView(view);
+
+                // Recalculate scale factors based on new window size
+                scaleFactorX = static_cast<float>(windowSize.x) / 1920.0f;
+                scaleFactorY = static_cast<float>(windowSize.y) / 1080.0f;
+
+                // Rescale the platforms
+                for (auto& platform : platforms) {
+                    platform.rescale(scaleFactorX, scaleFactorY);
+                }
+            }
         }
 
         window.clear();
@@ -93,7 +115,7 @@ int main() {
 
         float playerX = player->getGlobalBounds().left;
 
-        background.render(window, window.getSize(), playerX, deltaTime);
+        background.render(window, windowSize, playerX, deltaTime);
 
         player->update(deltaTime, platforms, windowSize.x, windowSize.y);
 

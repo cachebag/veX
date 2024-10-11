@@ -10,6 +10,7 @@ public:
     sf::FloatRect getBounds() const;      // Get the bounding box of the platform
 
     const std::vector<sf::RectangleShape>& getTiles() const;  // Get individual tiles for collision detection
+    void rescale(float scaleX, float scaleY);  // Rescale platform tiles when window is resized
 
 private:
     std::vector<sf::RectangleShape> tiles;  // A collection of tiled rectangles

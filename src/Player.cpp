@@ -34,7 +34,7 @@ Player::Player(float startX, float startY)
     sprite.setTextureRect(currentFrame);
 
     sprite.setPosition(x, y);
-    sprite.setScale(2.0f, 2.0f);
+    sprite.setScale(2.0f, 2.0f);  // Adjust scale dynamically in main.cpp based on window size
 }
 
 void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {

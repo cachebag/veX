@@ -1,7 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
-#include "Platform.hpp" 
+#include "Platform.hpp"
 
 class Enemy {
 public:
@@ -10,9 +10,6 @@ public:
     void update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
     void draw(sf::RenderWindow& window) const;
     sf::FloatRect getGlobalBounds() const;
-
-    void collectOrb();
-    int getOrbCount() const;
 
 private:
     float x, y; 
@@ -49,8 +46,6 @@ private:
     float patrolStartX, patrolEndX; 
     float aggroRange; 
 
-    void resetAnimation();
-    void changeState(EnemyState newState);
     void updatePatrolling(float deltaTime);
     void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
     void boundDetection(int windowWidth, int windowHeight);
