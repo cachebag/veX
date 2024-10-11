@@ -32,7 +32,7 @@ private:
 
     const int frameWidth = 64;
     const int frameHeight = 64;
-    int totalFrames = 3;
+    int totalFrames = 6;
     const int idleTotalFrames = 3;
 
     enum class EnemyState {
