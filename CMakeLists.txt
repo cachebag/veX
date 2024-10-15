@@ -25,8 +25,14 @@ link_directories(${GTK3_LIBRARY_DIRS})
 # Add SFML (adjust components as needed)
 find_package(SFML 2.5 COMPONENTS system window graphics REQUIRED)
 
+
 # Add NFD Library (ensure libnfd.a is in the correct directory for each platform)
 add_library(nfd STATIC IMPORTED)
+
+# Add NFD Library (assuming libnfd.a is in the lib/macos directory)
+add_library(nfd STATIC IMPORTED)
+set_target_properties(nfd PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/macos/libnfd.a)
+set_target_properties(nfd PROPERTIES LINKER_LANGUAGE C)
 
 # Set source and output directories
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
@@ -63,7 +69,12 @@ endif()
 # Link SFML, NFD, and GTK3 libraries
 target_link_libraries(game sfml-system sfml-window sfml-graphics nfd ${GTK3_LIBRARIES})
 
+
 # Ensure GTK3 linking flags are correctly applied (provided by pkg-config)
 target_link_options(game PRIVATE ${GTK3_LDFLAGS})
 target_compile_options(game PRIVATE ${GTK3_CFLAGS_OTHER})
+
+# Link the SFML, NFD, GTK libraries, and macOS system frameworks
+target_link_libraries(${PROJECT_NAME} sfml-system sfml-window sfml-graphics nfd ${GTK3_LIBRARIES} "-framework AppKit" "-framework Foundation")
+
 
