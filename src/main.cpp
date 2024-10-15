@@ -46,7 +46,7 @@ void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePo
     }
 
     #ifdef __APPLE__
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
+        window.create(sf::VideoMode(1920, 1080, 32), "veX", sf::Style::None);
     #else
         window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
     #endif
