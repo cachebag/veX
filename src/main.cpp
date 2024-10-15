@@ -87,9 +87,9 @@ std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platfo
     }
 
     #ifdef __APPLE__
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
+        window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::None);
     #else
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+        window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::None);
     #endif
 
     return tiles;
