@@ -106,18 +106,23 @@ std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platfo
 
 void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& baseResolution) {
     sf::Vector2u windowSize = window.getSize();
-    float aspectRatio = float(windowSize.x) / float(windowSize.y);
-    float baseAspectRatio = float(baseResolution.x) / float(baseResolution.y);
+    
+    // Calculate the aspect ratios
+    float windowAspectRatio = static_cast<float>(windowSize.x) / windowSize.y;
+    float baseAspectRatio = static_cast<float>(baseResolution.x) / baseResolution.y;
 
-    if (aspectRatio > baseAspectRatio) {
-        // Adjust width to maintain aspect ratio
-        float newWidth = baseResolution.y * aspectRatio;
+    if (windowAspectRatio > baseAspectRatio) {
+        // Window is wider than base aspect ratio, adjust width
+        float newWidth = baseResolution.y * windowAspectRatio;
         view.setSize(newWidth, baseResolution.y);
     } else {
-        // Adjust height to maintain aspect ratio
-        float newHeight = baseResolution.x / aspectRatio;
+        // Window is taller than base aspect ratio, adjust height
+        float newHeight = baseResolution.x / windowAspectRatio;
         view.setSize(baseResolution.x, newHeight);
     }
+    
+    // Center the view and apply it to the window
+    view.setCenter(baseResolution.x / 2.0f, baseResolution.y / 2.0f);
     window.setView(view);
 }
 
@@ -137,6 +142,9 @@ int main() {
 
     sf::View view(sf::FloatRect(0, 0, baseResolution.x, baseResolution.y));
     window.setView(view);
+
+    // Apply the view scaling at startup
+    updateView(window, view, baseResolution);
 
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
