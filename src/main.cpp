@@ -104,31 +104,25 @@ std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platfo
     return tiles;
 }
 
+// Properly maintain aspect ratio and scale the view
 void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& baseResolution) {
     sf::Vector2u windowSize = window.getSize();
     
-    // Calculate the aspect ratios
-    float windowAspectRatio = static_cast<float>(windowSize.x) / windowSize.y;
-    float baseAspectRatio = static_cast<float>(baseResolution.x) / baseResolution.y;
+    // Calculate the scaling factor based on the window size relative to the base resolution
+    float scaleX = static_cast<float>(windowSize.x) / baseResolution.x;
+    float scaleY = static_cast<float>(windowSize.y) / baseResolution.y;
+    float scaleFactor = std::min(scaleX, scaleY);
 
-    if (windowAspectRatio > baseAspectRatio) {
-        // Window is wider than base aspect ratio, adjust width
-        float newWidth = baseResolution.y * windowAspectRatio;
-        view.setSize(newWidth, baseResolution.y);
-    } else {
-        // Window is taller than base aspect ratio, adjust height
-        float newHeight = baseResolution.x / windowAspectRatio;
-        view.setSize(baseResolution.x, newHeight);
-    }
-    
-    // Center the view and apply it to the window
-    view.setCenter(baseResolution.x / 2.0f, baseResolution.y / 2.0f);
+    // Set the view size, but ensure that it's centered and maintains the aspect ratio
+    view.setSize(baseResolution.x, baseResolution.y);  // Keep the view at base resolution size
+    view.zoom(1.0f / scaleFactor);  // Scale down/up the view according to the scale factor
+
     window.setView(view);
 }
 
 int main() {
-    // Base resolution that everything is designed around
-    sf::Vector2u baseResolution(1920, 1080);
+    // Base resolution that everything is designed around (1280x720)
+    sf::Vector2u baseResolution(1280, 720);
 
     sf::RenderWindow window;
 
