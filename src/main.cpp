@@ -30,7 +30,71 @@ void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float grid
     }
 }
 
-// Function to adjust the view and maintain aspect ratio
+void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePositions) {
+    window.create(sf::VideoMode(1280, 720), "veX - Saving...", sf::Style::Close);
+
+    nfdchar_t* outPath = nullptr;
+    nfdresult_t result = NFD_SaveDialog("txt", nullptr, &outPath);
+    if (result == NFD_OKAY) {
+        std::ofstream outFile(outPath);
+        for (const auto& tilePos : tilePositions) {
+            outFile << tilePos.x << " " << tilePos.y << "\n";
+        }
+        outFile.close();
+    } else if (result != NFD_CANCEL) {
+        std::cerr << "Error: " << NFD_GetError() << std::endl;
+    }
+
+    #ifdef __APPLE__
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
+    #else
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    #endif
+}
+
+std::vector<sf::Vector2f> loadLevelFromFile(const std::string& filepath, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize) {
+    std::vector<sf::Vector2f> tiles;
+    std::ifstream inFile(filepath);
+    float x, y;
+    platforms.clear();
+    while (inFile >> x >> y) {
+        sf::Vector2f pos(x, y);
+        tiles.push_back(pos);
+        platforms.emplace_back(x, y, gridSize, gridSize, tileTexture);
+    }
+    inFile.close();
+    return tiles;
+}
+
+std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize) {
+    window.create(sf::VideoMode(1280, 720), "veX - Loading...", sf::Style::Close);
+
+    std::vector<sf::Vector2f> tiles;
+    nfdchar_t* outPath = nullptr;
+    nfdresult_t result = NFD_OpenDialog("txt", nullptr, &outPath);
+    if (result == NFD_OKAY) {
+        std::ifstream inFile(outPath);
+        float x, y;
+        platforms.clear();
+        while (inFile >> x >> y) {
+            sf::Vector2f pos(x, y);
+            tiles.push_back(pos);
+            platforms.emplace_back(x, y, gridSize, gridSize, tileTexture);
+        }
+        inFile.close();
+    } else if (result != NFD_CANCEL) {
+        std::cerr << "Error: " << NFD_GetError() << std::endl;
+    }
+
+    #ifdef __APPLE__
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
+    #else
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    #endif
+
+    return tiles;
+}
+
 void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& internalResolution) {
     sf::Vector2u windowSize = window.getSize();
 
@@ -38,39 +102,32 @@ void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& in
     float internalAspectRatio = static_cast<float>(internalResolution.x) / internalResolution.y;
 
     if (windowAspectRatio > internalAspectRatio) {
-        // Add pillarboxing (black bars on the sides)
         float viewportWidth = internalAspectRatio / windowAspectRatio;
         view.setViewport(sf::FloatRect((1.0f - viewportWidth) / 2.0f, 0.0f, viewportWidth, 1.0f));
     } else {
-        // Add letterboxing (black bars on the top and bottom)
         float viewportHeight = windowAspectRatio / internalAspectRatio;
         view.setViewport(sf::FloatRect(0.0f, (1.0f - viewportHeight) / 2.0f, 1.0f, viewportHeight));
     }
 
-    // Center the view and apply it to the window
     view.setSize(internalResolution.x, internalResolution.y);
     view.setCenter(internalResolution.x / 2.0f, internalResolution.y / 2.0f);
     window.setView(view);
 }
 
 int main() {
-    // Set internal resolution for the game logic
-    sf::Vector2u internalResolution(1920, 1080);  // Fixed internal resolution
+    sf::Vector2u internalResolution(1920, 1080);
 
     sf::RenderWindow window;
 
     #ifdef __APPLE__
-        // On macOS, use windowed fullscreen (borderless) to prevent segfaults
         window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
     #else
-        // For other platforms (Windows/Linux), use regular fullscreen mode
         window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
     #endif
 
     sf::View view(sf::FloatRect(0, 0, internalResolution.x, internalResolution.y));
     window.setView(view);
 
-    // Apply the view scaling at startup
     updateView(window, view, internalResolution);
 
     sf::Font font;
@@ -93,10 +150,11 @@ int main() {
     std::unique_ptr<Player> player = std::make_unique<Player>(0, 0);
     std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(2400, 1100);
     GameMode currentMode = GameMode::Play;
-    std::vector<sf::Vector2f> tilePositions;
     bool debugMode = false;
     const float gridSize = 64.0f;
     std::vector<Platform> platforms;
+
+    std::vector<sf::Vector2f> tilePositions = loadLevelFromFile("levels/level1.txt", platforms, tileTexture, gridSize);
 
     while (window.isOpen()) {
         sf::Event event;
@@ -107,7 +165,7 @@ int main() {
             }
 
             if (event.type == sf::Event::Resized) {
-                updateView(window, view, internalResolution);  // Adjust view on resize
+                updateView(window, view, internalResolution);
             }
 
             if (event.type == sf::Event::KeyPressed) {
@@ -118,32 +176,28 @@ int main() {
                     debugMode = !debugMode;
                 }
                 if (event.key.code == sf::Keyboard::S) {
-                    // Implement saveLevel here
+                    saveLevel(window, tilePositions);
                 }
                 if (event.key.code == sf::Keyboard::L) {
-                    // Implement loadLevel here
+                    tilePositions = loadLevel(window, platforms, tileTexture, gridSize);
                 }
             }
 
             if (currentMode == GameMode::Edit) {
-                // Get the mouse position in the window (pixels) and convert it to world coordinates (game coordinates)
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
 
-                // Align the tile position to the grid by snapping the world position to the nearest grid cell
                 sf::Vector2f tilePos(static_cast<float>(static_cast<int>(worldPos.x / gridSize) * gridSize),
                                      static_cast<float>(static_cast<int>(worldPos.y / gridSize) * gridSize));
 
                 if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-                    // Only place a tile if it's not already placed at the same position
                     if (std::find(tilePositions.begin(), tilePositions.end(), tilePos) == tilePositions.end()) {
                         tilePositions.push_back(tilePos);
-                        platforms.emplace_back(tilePos.x, tilePos.y, gridSize, gridSize, tileTexture);  // Add platform
+                        platforms.emplace_back(tilePos.x, tilePos.y, gridSize, gridSize, tileTexture);
                     }
                 }
 
                 if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
-                    // Find and remove the tile if it exists at the current position
                     auto it = std::find(tilePositions.begin(), tilePositions.end(), tilePos);
                     if (it != tilePositions.end()) {
                         int index = std::distance(tilePositions.begin(), it);
