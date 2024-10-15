@@ -246,4 +246,3 @@ void Player::resetAnimation() {
     currentFrame.left = 0;
     sprite.setTextureRect(currentFrame);
 }
-

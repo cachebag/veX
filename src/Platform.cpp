@@ -1,7 +1,6 @@
 #include "../include/Platform.hpp"
 #include <cmath>
 
-
 Platform::Platform(float x, float y, float width, float height, const sf::Texture& texture) {
     float tileWidth = static_cast<float>(texture.getSize().x);
     float tileHeight = static_cast<float>(texture.getSize().y);
@@ -43,6 +42,13 @@ const std::vector<sf::RectangleShape>& Platform::getTiles() const {
 void Platform::draw(sf::RenderWindow& window) {
     for (const auto& tile : tiles) {
         window.draw(tile);  
+    }
+}
+
+// Rescale the platform when window is resized
+void Platform::rescale(float scaleX, float scaleY) {
+    for (auto& tile : tiles) {
+        tile.setScale(scaleX, scaleY);
     }
 }
 
