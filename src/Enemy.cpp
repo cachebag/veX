@@ -3,18 +3,25 @@
 #include <iostream>
 
 Enemy::Enemy(float startX, float startY)
-    : x(startX), y(startY), 
-      yVelocity(0.0f), gravity(2000.0f), terminalVelocity(1000.0f),
+    : x(startX), 
+      y(startY), 
+      yVelocity(0.0f), 
+      gravity(2000.0f), 
+      terminalVelocity(1000.0f), 
       speedX(200.0f),  // Adjust speed for smooth patrolling
-      orbCount(0),
-      currentState(EnemyState::PATROLLING),
+      orbCount(0), 
+      walkingTexture(),  // Default initialization for sf::Texture
+      idleTexture(),     // Default initialization for sf::Texture
+      sprite(),          // Default initialization for sf::Sprite
+      currentFrame(),    // Default initialization for sf::IntRect
+      currentFrameIndex(0), 
+      animationTimer(0.0f), 
+      frameDuration(0.1f), 
+      isIdle(true), 
+      currentState(EnemyState::PATROLLING), 
       patrolStartX(startX - 200.0f),  // Define patrol range relative to start position
       patrolEndX(startX + 200.0f),    // Patrol 400 units in total
-      aggroRange(300.0f),
-      currentFrameIndex(0),
-      animationTimer(0.0f),
-      frameDuration(0.1f),
-      isIdle(true)
+      aggroRange(300.0f)
 {
     if (!idleTexture.loadFromFile("assets/characters/enemies/wrathborn.png")) {
         std::cerr << "Error loading idle texture file" << std::endl;
