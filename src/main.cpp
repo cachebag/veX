@@ -123,10 +123,10 @@ int main() {
                 }
             }
 
-            if (currentMode == GameMode::Edit) {
+            if (currentMode == GameMode::Edit && loadLevel) {
                 if (event.type == sf::Event::KeyPressed) {
                     if (event.key.code == sf::Keyboard::E) {
-                        player = std::make_unique<Player>(0, 0);    // This keeps the player from spawning in the tiles i think lol  
+                        player = std::make_unique<Player>(0, 0); // i think this stops the player from spawning in the tiles when loading a level? lol     
           }
         }
       }
