@@ -30,99 +30,32 @@ void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float grid
     }
 }
 
-void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePositions) {
-    // Switch to windowed mode temporarily
-    window.create(sf::VideoMode(1280, 720), "veX - Saving...", sf::Style::Close);
-
-    nfdchar_t* outPath = nullptr;
-    nfdresult_t result = NFD_SaveDialog("txt", nullptr, &outPath);
-    if (result == NFD_OKAY) {
-        std::ofstream outFile(outPath);
-        if (!outFile) {
-            std::cerr << "Error: Could not open file for saving." << std::endl;
-            return;
-        }
-
-        for (const auto& tilePos : tilePositions) {
-            outFile << tilePos.x << " " << tilePos.y << "\n";  // Save each tile position
-        }
-
-        outFile.close();
-        std::cout << "Level saved successfully." << std::endl;
-    } else if (result == NFD_CANCEL) {
-        std::cerr << "Save cancelled." << std::endl;
-    } else {
-        std::cerr << "Error: " << NFD_GetError() << std::endl;
-    }
-
-    // Restore fullscreen mode
-    #ifdef __APPLE__
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
-    #else
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
-    #endif
-}
-
-std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize) {
-    // Switch to windowed mode temporarily
-    window.create(sf::VideoMode(1280, 720), "veX - Loading...", sf::Style::Close);
-
-    nfdchar_t* outPath = nullptr;
-    std::vector<sf::Vector2f> tiles;
-    nfdresult_t result = NFD_OpenDialog("txt", nullptr, &outPath);
-    if (result == NFD_OKAY) {
-        std::ifstream inFile(outPath);
-        if (!inFile) {
-            std::cerr << "Error: Could not open file for loading." << std::endl;
-            return tiles;
-        }
-
-        float x, y;
-        platforms.clear();  // Clear existing platforms
-        tiles.clear();      // Clear existing tiles
-        while (inFile >> x >> y) {
-            sf::Vector2f pos(x, y);
-            tiles.push_back(pos);  // Add the tile position
-            platforms.emplace_back(pos.x, pos.y, gridSize, gridSize, tileTexture);  // Add platform
-        }
-
-        inFile.close();
-        std::cout << "Level loaded successfully." << std::endl;
-    } else if (result == NFD_CANCEL) {
-        std::cerr << "Load cancelled." << std::endl;
-    } else {
-        std::cerr << "Error: " << NFD_GetError() << std::endl;
-    }
-
-    // Restore fullscreen mode
-    #ifdef __APPLE__
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
-    #else
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
-    #endif
-
-    return tiles;
-}
-
-// Properly maintain aspect ratio and scale the view
-void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& baseResolution) {
+// Function to adjust the view and maintain aspect ratio
+void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& internalResolution) {
     sf::Vector2u windowSize = window.getSize();
-    
-    // Calculate the scaling factor based on the window size relative to the base resolution
-    float scaleX = static_cast<float>(windowSize.x) / baseResolution.x;
-    float scaleY = static_cast<float>(windowSize.y) / baseResolution.y;
-    float scaleFactor = std::min(scaleX, scaleY);
 
-    // Set the view size, but ensure that it's centered and maintains the aspect ratio
-    view.setSize(baseResolution.x, baseResolution.y);  // Keep the view at base resolution size
-    view.zoom(1.0f / scaleFactor);  // Scale down/up the view according to the scale factor
+    float windowAspectRatio = static_cast<float>(windowSize.x) / windowSize.y;
+    float internalAspectRatio = static_cast<float>(internalResolution.x) / internalResolution.y;
 
+    if (windowAspectRatio > internalAspectRatio) {
+        // Add pillarboxing (black bars on the sides)
+        float viewportWidth = internalAspectRatio / windowAspectRatio;
+        view.setViewport(sf::FloatRect((1.0f - viewportWidth) / 2.0f, 0.0f, viewportWidth, 1.0f));
+    } else {
+        // Add letterboxing (black bars on the top and bottom)
+        float viewportHeight = windowAspectRatio / internalAspectRatio;
+        view.setViewport(sf::FloatRect(0.0f, (1.0f - viewportHeight) / 2.0f, 1.0f, viewportHeight));
+    }
+
+    // Center the view and apply it to the window
+    view.setSize(internalResolution.x, internalResolution.y);
+    view.setCenter(internalResolution.x / 2.0f, internalResolution.y / 2.0f);
     window.setView(view);
 }
 
 int main() {
-    // Base resolution that everything is designed around (1280x720)
-    sf::Vector2u baseResolution(1280, 720);
+    // Set internal resolution for the game logic
+    sf::Vector2u internalResolution(1920, 1080);  // Fixed internal resolution
 
     sf::RenderWindow window;
 
@@ -134,11 +67,11 @@ int main() {
         window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
     #endif
 
-    sf::View view(sf::FloatRect(0, 0, baseResolution.x, baseResolution.y));
+    sf::View view(sf::FloatRect(0, 0, internalResolution.x, internalResolution.y));
     window.setView(view);
 
     // Apply the view scaling at startup
-    updateView(window, view, baseResolution);
+    updateView(window, view, internalResolution);
 
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
@@ -148,7 +81,7 @@ int main() {
 
     Background background("assets/tutorial_level/background.png",
                           "assets/tutorial_level/middleground.png",
-                          "assets/tutorial_level/mountains.png", baseResolution);
+                          "assets/tutorial_level/mountains.png", internalResolution);
 
     sf::Texture tileTexture;
     if (!tileTexture.loadFromFile("assets/tutorial_level/brick.png")) {
@@ -174,7 +107,7 @@ int main() {
             }
 
             if (event.type == sf::Event::Resized) {
-                updateView(window, view, baseResolution);
+                updateView(window, view, internalResolution);  // Adjust view on resize
             }
 
             if (event.type == sf::Event::KeyPressed) {
@@ -185,10 +118,10 @@ int main() {
                     debugMode = !debugMode;
                 }
                 if (event.key.code == sf::Keyboard::S) {
-                    saveLevel(window, tilePositions);
+                    // Implement saveLevel here
                 }
                 if (event.key.code == sf::Keyboard::L) {
-                    tilePositions = loadLevel(window, platforms, tileTexture, gridSize);
+                    // Implement loadLevel here
                 }
             }
 
@@ -224,7 +157,7 @@ int main() {
         window.clear();
         float playerX = player->getGlobalBounds().left;
         float deltaTime = clock.restart().asSeconds();
-        background.render(window, baseResolution, playerX, deltaTime);
+        background.render(window, internalResolution, playerX, deltaTime);
 
         for (const auto& pos : tilePositions) {
             sf::Sprite tile(tileTexture);
