@@ -13,71 +13,113 @@
 
 enum class GameMode { Play, Edit };
 
-void drawGrid(sf::RenderWindow& window, const sf::Vector2u& windowSize, float gridSize) {
-    sf::RectangleShape line(sf::Vector2f(windowSize.x, 1.0f));
+void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float gridSize) {
+    sf::RectangleShape line(sf::Vector2f(viewSize.x, 1.0f));
     line.setFillColor(sf::Color(255, 255, 255, 100));
 
-    for (float y = 0; y < windowSize.y; y += gridSize) {
+    for (float y = 0; y < viewSize.y; y += gridSize) {
         line.setPosition(0, y);
         window.draw(line);
     }
 
-    line.setSize(sf::Vector2f(1.0f, windowSize.y));
+    line.setSize(sf::Vector2f(1.0f, viewSize.y));
 
-    for (float x = 0; x < windowSize.x; x += gridSize) {
+    for (float x = 0; x < viewSize.x; x += gridSize) {
         line.setPosition(x, 0);
         window.draw(line);
     }
 }
 
-void saveLevel(const std::vector<sf::Vector2f>& tilePositions) {
+void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePositions) {
+    // Switch to windowed mode temporarily
+    window.create(sf::VideoMode(1280, 720), "veX - Saving...", sf::Style::Close);
+
     nfdchar_t* outPath = nullptr;
     nfdresult_t result = NFD_SaveDialog("txt", nullptr, &outPath);
     if (result == NFD_OKAY) {
         std::ofstream outFile(outPath);
-        for (const auto& tilePos : tilePositions) {
-            outFile << tilePos.x << " " << tilePos.y << "\n";
+        if (!outFile) {
+            std::cerr << "Error: Could not open file for saving." << std::endl;
+            return;
         }
+
+        for (const auto& tilePos : tilePositions) {
+            outFile << tilePos.x << " " << tilePos.y << "\n";  // Save each tile position
+        }
+
         outFile.close();
+        std::cout << "Level saved successfully." << std::endl;
     } else if (result == NFD_CANCEL) {
         std::cerr << "Save cancelled." << std::endl;
     } else {
         std::cerr << "Error: " << NFD_GetError() << std::endl;
     }
+
+    // Restore fullscreen mode
+    window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
 }
 
-std::vector<sf::Vector2f> loadLevel(std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize) {
+std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize) {
+    // Switch to windowed mode temporarily
+    window.create(sf::VideoMode(1280, 720), "veX - Loading...", sf::Style::Close);
+
     nfdchar_t* outPath = nullptr;
     std::vector<sf::Vector2f> tiles;
     nfdresult_t result = NFD_OpenDialog("txt", nullptr, &outPath);
     if (result == NFD_OKAY) {
         std::ifstream inFile(outPath);
+        if (!inFile) {
+            std::cerr << "Error: Could not open file for loading." << std::endl;
+            return tiles;
+        }
+
         float x, y;
-        platforms.clear();
+        platforms.clear();  // Clear existing platforms
+        tiles.clear();      // Clear existing tiles
         while (inFile >> x >> y) {
             sf::Vector2f pos(x, y);
-            tiles.push_back(pos);
-            platforms.emplace_back(x, y, gridSize, gridSize, tileTexture); 
+            tiles.push_back(pos);  // Add the tile position
+            platforms.emplace_back(pos.x, pos.y, gridSize, gridSize, tileTexture);  // Add platform
         }
+
         inFile.close();
+        std::cout << "Level loaded successfully." << std::endl;
     } else if (result == NFD_CANCEL) {
         std::cerr << "Load cancelled." << std::endl;
     } else {
         std::cerr << "Error: " << NFD_GetError() << std::endl;
     }
+
+    // Restore fullscreen mode
+    window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+
     return tiles;
 }
 
-int main() {
-    sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
-    sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
+void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& baseResolution) {
     sf::Vector2u windowSize = window.getSize();
-    float baseWidth = 1920.0f;
-    float baseHeight = 1080.0f;
-    float scaleX = static_cast<float>(windowSize.x) / baseWidth;
-    float scaleY = static_cast<float>(windowSize.y) / baseHeight;
+    float aspectRatio = float(windowSize.x) / float(windowSize.y);
+    float baseAspectRatio = float(baseResolution.x) / float(baseResolution.y);
 
-    float scaleFactor = std::min(scaleX, scaleY);
+    if (aspectRatio > baseAspectRatio) {
+        // Adjust width to maintain aspect ratio
+        float newWidth = baseResolution.y * aspectRatio;
+        view.setSize(newWidth, baseResolution.y);
+    } else {
+        // Adjust height to maintain aspect ratio
+        float newHeight = baseResolution.x / aspectRatio;
+        view.setSize(baseResolution.x, newHeight);
+    }
+    window.setView(view);
+}
+
+int main() {
+    // Base resolution that everything is designed around
+    sf::Vector2u baseResolution(1920, 1080);
+
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    sf::View view(sf::FloatRect(0, 0, baseResolution.x, baseResolution.y));
+    window.setView(view);
 
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
@@ -87,7 +129,7 @@ int main() {
 
     Background background("assets/tutorial_level/background.png",
                           "assets/tutorial_level/middleground.png",
-                          "assets/tutorial_level/mountains.png", windowSize);
+                          "assets/tutorial_level/mountains.png", baseResolution);
 
     sf::Texture tileTexture;
     if (!tileTexture.loadFromFile("assets/tutorial_level/brick.png")) {
@@ -104,8 +146,6 @@ int main() {
     const float gridSize = 64.0f;
     std::vector<Platform> platforms;
 
-    //tilePositions = loadLevel(platforms, tileTexture, gridSize); // This allows us to select a level upon running the game 
-
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -115,15 +155,8 @@ int main() {
             }
 
             if (event.type == sf::Event::Resized) {
-                sf::Vector2u windowSize = window.getSize();
-                float scaleX = static_cast<float>(windowSize.x) / baseWidth;
-                float scaleY = static_cast<float>(windowSize.y) / baseHeight;
-                float scaleFactor = std::min(scaleX, scaleY);
-
-                sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
-                window.setView(sf::View(visibleArea));
-
-      }
+                updateView(window, view, baseResolution);
+            }
 
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::E) {
@@ -133,49 +166,46 @@ int main() {
                     debugMode = !debugMode;
                 }
                 if (event.key.code == sf::Keyboard::S) {
-                    saveLevel(tilePositions);
+                    saveLevel(window, tilePositions);
                 }
                 if (event.key.code == sf::Keyboard::L) {
-                    tilePositions = loadLevel(platforms, tileTexture, gridSize);
+                    tilePositions = loadLevel(window, platforms, tileTexture, gridSize);
                 }
             }
 
-            if (currentMode == GameMode::Edit && loadLevel) {
-                if (event.type == sf::Event::KeyPressed) {
-                    if (event.key.code == sf::Keyboard::E) {
-                        player = std::make_unique<Player>(0, 0); // i think this stops the player from spawning in the tiles when loading a level? lol     
-          }
-        }
-      }
-
             if (currentMode == GameMode::Edit) {
-              sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-              sf::Vector2f tilePos(static_cast<float>(mousePos.x) - (mousePos.x % static_cast<int>(gridSize)),
-                                  static_cast<float>(mousePos.y) - (mousePos.y % static_cast<int>(gridSize)));
-              if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-                  if (std::find(tilePositions.begin(), tilePositions.end(), tilePos) == tilePositions.end()) {
-                      tilePositions.push_back(tilePos);
-                      platforms.emplace_back(tilePos.x, tilePos.y, gridSize, gridSize, tileTexture);  // Add platform
+                // Get the mouse position in the window (pixels) and convert it to world coordinates (game coordinates)
+                sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
+                sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
+
+                // Align the tile position to the grid by snapping the world position to the nearest grid cell
+                sf::Vector2f tilePos(static_cast<float>(static_cast<int>(worldPos.x / gridSize) * gridSize),
+                                     static_cast<float>(static_cast<int>(worldPos.y / gridSize) * gridSize));
+
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                    // Only place a tile if it's not already placed at the same position
+                    if (std::find(tilePositions.begin(), tilePositions.end(), tilePos) == tilePositions.end()) {
+                        tilePositions.push_back(tilePos);
+                        platforms.emplace_back(tilePos.x, tilePos.y, gridSize, gridSize, tileTexture);  // Add platform
                     }
                 }
-    
+
                 if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
+                    // Find and remove the tile if it exists at the current position
                     auto it = std::find(tilePositions.begin(), tilePositions.end(), tilePos);
                     if (it != tilePositions.end()) {
                         int index = std::distance(tilePositions.begin(), it);
                         tilePositions.erase(it);
-
                         platforms.erase(platforms.begin() + index);
-                  }
-              }
-          }
-
+                    }
+                }
+            }
         }
 
         window.clear();
         float playerX = player->getGlobalBounds().left;
         float deltaTime = clock.restart().asSeconds();
-        background.render(window, window.getSize(), playerX, deltaTime);
+        background.render(window, baseResolution, playerX, deltaTime);
 
         for (const auto& pos : tilePositions) {
             sf::Sprite tile(tileTexture);
@@ -184,14 +214,14 @@ int main() {
         }
 
         if (currentMode == GameMode::Play) {
-            player->update(deltaTime, platforms, windowSize.x, windowSize.y);
-            enemy->update(deltaTime, platforms, windowSize.x, windowSize.y);
+            player->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
+            enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
             player->draw(window);
             enemy->draw(window);
         }
 
         if (currentMode == GameMode::Edit && debugMode) {
-            drawGrid(window, windowSize, gridSize);
+            drawGrid(window, view.getSize(), gridSize);
         }
 
         window.display();
