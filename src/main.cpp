@@ -56,7 +56,11 @@ void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePo
     }
 
     // Restore fullscreen mode
-    window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    #ifdef __APPLE__
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
+    #else
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    #endif
 }
 
 std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize) {
@@ -91,7 +95,11 @@ std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platfo
     }
 
     // Restore fullscreen mode
-    window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    #ifdef __APPLE__
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
+    #else
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    #endif
 
     return tiles;
 }
@@ -117,7 +125,16 @@ int main() {
     // Base resolution that everything is designed around
     sf::Vector2u baseResolution(1920, 1080);
 
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    sf::RenderWindow window;
+
+    #ifdef __APPLE__
+        // On macOS, use windowed fullscreen (borderless) to prevent segfaults
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
+    #else
+        // For other platforms (Windows/Linux), use regular fullscreen mode
+        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
+    #endif
+
     sf::View view(sf::FloatRect(0, 0, baseResolution.x, baseResolution.y));
     window.setView(view);
 
