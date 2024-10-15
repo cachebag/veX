@@ -72,6 +72,12 @@ int main() {
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(desktopMode, "veX", sf::Style::Default);
     sf::Vector2u windowSize = window.getSize();
+    float baseWidth = 1920.0f;
+    float baseHeight = 1080.0f;
+    float scaleX = static_cast<float>(windowSize.x) / baseWidth;
+    float scaleY = static_cast<float>(windowSize.y) / baseHeight;
+
+    float scaleFactor = std::min(scaleX, scaleY);
 
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
@@ -107,6 +113,17 @@ int main() {
                 (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
                 window.close();
             }
+
+            if (event.type == sf::Event::Resized) {
+                sf::Vector2u windowSize = window.getSize();
+                float scaleX = static_cast<float>(windowSize.x) / baseWidth;
+                float scaleY = static_cast<float>(windowSize.y) / baseHeight;
+                float scaleFactor = std::min(scaleX, scaleY);
+
+                sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
+                window.setView(sf::View(visibleArea));
+
+      }
 
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::E) {
