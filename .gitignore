@@ -12,7 +12,6 @@ Makefile
 *.obj
 
 # Compiled static and dynamic libraries
-*.a
 *.so
 *.dll
 *.dylib
