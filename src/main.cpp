@@ -95,12 +95,14 @@ std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platfo
     return tiles;
 }
 
+// Update view to maintain consistent aspect ratio
 void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& internalResolution) {
     sf::Vector2u windowSize = window.getSize();
 
     float windowAspectRatio = static_cast<float>(windowSize.x) / windowSize.y;
     float internalAspectRatio = static_cast<float>(internalResolution.x) / internalResolution.y;
 
+    // Maintain aspect ratio with black bars if necessary
     if (windowAspectRatio > internalAspectRatio) {
         float viewportWidth = internalAspectRatio / windowAspectRatio;
         view.setViewport(sf::FloatRect((1.0f - viewportWidth) / 2.0f, 0.0f, viewportWidth, 1.0f));
