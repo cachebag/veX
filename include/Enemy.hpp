@@ -5,11 +5,21 @@
 
 class Enemy {
 public:
+    enum class EnemyState {
+        IDLE,
+        PATROLLING,
+        AGGRO,
+        ATTACKING
+    };
+
     Enemy(float startX = 500.0f, float startY = 500.0f);
 
     void update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
     void draw(sf::RenderWindow& window) const;
     sf::FloatRect getGlobalBounds() const;
+
+    EnemyState getState() const;
+    void setState(EnemyState newState);
 
 private:
     float x, y; 
@@ -35,19 +45,14 @@ private:
     int totalFrames = 6;
     const int idleTotalFrames = 3;
 
-    enum class EnemyState {
-        IDLE,
-        PATROLLING,
-        AGGRO,
-        ATTACKING
-    };
-
-    EnemyState currentState; 
+    EnemyState currentState;  
+    EnemyState previousState; 
     float patrolStartX, patrolEndX; 
     float aggroRange; 
 
     void updatePatrolling(float deltaTime);
     void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
     void boundDetection(int windowWidth, int windowHeight);
+    void resetAnimation();
 };
 

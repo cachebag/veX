@@ -95,11 +95,9 @@ std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platfo
     return tiles;
 }
 
-// Update view to maintain consistent aspect ratio across different screen sizes
 void updateView(sf::RenderWindow& window, sf::View& view) {
     sf::Vector2u windowSize = window.getSize();
 
-    // Internal base resolution of the game
     float baseWidth = 1920.0f;
     float baseHeight = 1080.0f;
     
@@ -107,26 +105,21 @@ void updateView(sf::RenderWindow& window, sf::View& view) {
     float internalAspectRatio = baseWidth / baseHeight;
 
     if (windowAspectRatio > internalAspectRatio) {
-        // Adjust the viewport to keep aspect ratio by adding horizontal bars
         float viewportWidth = internalAspectRatio / windowAspectRatio;
         view.setViewport(sf::FloatRect((1.0f - viewportWidth) / 2.0f, 0.0f, viewportWidth, 1.0f));
     } else {
-        // Adjust the viewport to keep aspect ratio by adding vertical bars
         float viewportHeight = windowAspectRatio / internalAspectRatio;
         view.setViewport(sf::FloatRect(0.0f, (1.0f - viewportHeight) / 2.0f, 1.0f, viewportHeight));
     }
 
-    // Set the size of the view to the base internal resolution, but let it scale
     view.setSize(baseWidth, baseHeight);
     view.setCenter(baseWidth / 2.0f, baseHeight / 2.0f);
     window.setView(view);
 }
 
 int main() {
-    // Create the window based on the actual screen resolution
-    sf::RenderWindow window(sf::VideoMode(1366, 768), "veX", sf::Style::Fullscreen);  // Testing on 1366x768 resolution
+    sf::RenderWindow window(sf::VideoMode(1366, 768), "veX", sf::Style::Fullscreen);  
 
-    // Create a view and update it to maintain aspect ratio
     sf::View view;
     updateView(window, view);
 
@@ -148,7 +141,7 @@ int main() {
 
     sf::Clock clock;
     std::unique_ptr<Player> player = std::make_unique<Player>(0, 0);
-    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(2400, 1100);
+    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(1400, 800);
     GameMode currentMode = GameMode::Play;
     bool debugMode = false;
     const float gridSize = 64.0f;
@@ -220,7 +213,7 @@ int main() {
         }
 
         if (currentMode == GameMode::Play) {
-            player->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
+            player->update(deltaTime, platforms, window.getSize().x, window.getSize().y, *enemy);
             enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
             player->draw(window);
             enemy->draw(window);
@@ -235,4 +228,3 @@ int main() {
 
     return 0;
 }
-
