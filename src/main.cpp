@@ -95,42 +95,40 @@ std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platfo
     return tiles;
 }
 
-// Update view to maintain consistent aspect ratio
-void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2u& internalResolution) {
+// Update view to maintain consistent aspect ratio across different screen sizes
+void updateView(sf::RenderWindow& window, sf::View& view) {
     sf::Vector2u windowSize = window.getSize();
 
+    // Internal base resolution of the game
+    float baseWidth = 1920.0f;
+    float baseHeight = 1080.0f;
+    
     float windowAspectRatio = static_cast<float>(windowSize.x) / windowSize.y;
-    float internalAspectRatio = static_cast<float>(internalResolution.x) / internalResolution.y;
+    float internalAspectRatio = baseWidth / baseHeight;
 
-    // Maintain aspect ratio with black bars if necessary
     if (windowAspectRatio > internalAspectRatio) {
+        // Adjust the viewport to keep aspect ratio by adding horizontal bars
         float viewportWidth = internalAspectRatio / windowAspectRatio;
         view.setViewport(sf::FloatRect((1.0f - viewportWidth) / 2.0f, 0.0f, viewportWidth, 1.0f));
     } else {
+        // Adjust the viewport to keep aspect ratio by adding vertical bars
         float viewportHeight = windowAspectRatio / internalAspectRatio;
         view.setViewport(sf::FloatRect(0.0f, (1.0f - viewportHeight) / 2.0f, 1.0f, viewportHeight));
     }
 
-    view.setSize(internalResolution.x, internalResolution.y);
-    view.setCenter(internalResolution.x / 2.0f, internalResolution.y / 2.0f);
+    // Set the size of the view to the base internal resolution, but let it scale
+    view.setSize(baseWidth, baseHeight);
+    view.setCenter(baseWidth / 2.0f, baseHeight / 2.0f);
     window.setView(view);
 }
 
 int main() {
-    sf::Vector2u internalResolution(1920, 1080);
+    // Create the window based on the actual screen resolution
+    sf::RenderWindow window(sf::VideoMode(1366, 768), "veX", sf::Style::Fullscreen);  // Testing on 1366x768 resolution
 
-    sf::RenderWindow window;
-
-    #ifdef __APPLE__
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::None);
-    #else
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
-    #endif
-
-    sf::View view(sf::FloatRect(0, 0, internalResolution.x, internalResolution.y));
-    window.setView(view);
-
-    updateView(window, view, internalResolution);
+    // Create a view and update it to maintain aspect ratio
+    sf::View view;
+    updateView(window, view);
 
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
@@ -140,7 +138,7 @@ int main() {
 
     Background background("assets/tutorial_level/background.png",
                           "assets/tutorial_level/middleground.png",
-                          "assets/tutorial_level/mountains.png", internalResolution);
+                          "assets/tutorial_level/mountains.png", sf::Vector2u(1920, 1080));
 
     sf::Texture tileTexture;
     if (!tileTexture.loadFromFile("assets/tutorial_level/brick.png")) {
@@ -167,7 +165,7 @@ int main() {
             }
 
             if (event.type == sf::Event::Resized) {
-                updateView(window, view, internalResolution);
+                updateView(window, view);
             }
 
             if (event.type == sf::Event::KeyPressed) {
@@ -213,7 +211,7 @@ int main() {
         window.clear();
         float playerX = player->getGlobalBounds().left;
         float deltaTime = clock.restart().asSeconds();
-        background.render(window, internalResolution, playerX, deltaTime);
+        background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
 
         for (const auto& pos : tilePositions) {
             sf::Sprite tile(tileTexture);
@@ -237,5 +235,4 @@ int main() {
 
     return 0;
 }
-
 
