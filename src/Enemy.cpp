@@ -8,19 +8,20 @@ Enemy::Enemy(float startX, float startY)
       yVelocity(0.0f), 
       gravity(2000.0f), 
       terminalVelocity(1000.0f), 
-      speedX(200.0f),  // Adjust speed for smooth patrolling
+      speedX(200.0f),  
       orbCount(0), 
-      walkingTexture(),  // Default initialization for sf::Texture
-      idleTexture(),     // Default initialization for sf::Texture
-      sprite(),          // Default initialization for sf::Sprite
-      currentFrame(),    // Default initialization for sf::IntRect
+      walkingTexture(),  
+      idleTexture(),     
+      sprite(),          
+      currentFrame(),    
       currentFrameIndex(0), 
       animationTimer(0.0f), 
       frameDuration(0.1f), 
       isIdle(true), 
       currentState(EnemyState::PATROLLING), 
-      patrolStartX(startX - 200.0f),  // Define patrol range relative to start position
-      patrolEndX(startX + 200.0f),    // Patrol 400 units in total
+      previousState(EnemyState::PATROLLING), 
+      patrolStartX(startX - 200.0f),  
+      patrolEndX(startX + 200.0f),    
       aggroRange(300.0f)
 {
     if (!idleTexture.loadFromFile("assets/characters/enemies/wrathborn.png")) {
@@ -29,13 +30,14 @@ Enemy::Enemy(float startX, float startY)
     if (!walkingTexture.loadFromFile("assets/characters/enemies/wrathborn_sprite_sheet.png")) {
         std::cerr << "Error loading walking texture file" << std::endl;
     }
-    sprite.setTexture(idleTexture);
-
+    
+    // Set initial sprite and frame
+    sprite.setTexture(walkingTexture);
     currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);
     sprite.setTextureRect(currentFrame);
 
     sprite.setPosition(x, y);
-    sprite.setScale(2.0f, 2.0f);  // Adjust scale
+    sprite.setScale(2.0f, 2.0f);  
 }
 
 void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
@@ -50,9 +52,17 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int 
 
     switch (currentState) {
         case EnemyState::IDLE:
+            if (previousState != currentState) {
+                sprite.setTexture(idleTexture); 
+                resetAnimation();
+            }
             break;
         case EnemyState::PATROLLING:
             updatePatrolling(deltaTime);
+            if (previousState != currentState) {
+                sprite.setTexture(walkingTexture);  
+                resetAnimation();
+            }
             break;
         case EnemyState::AGGRO:
             break;
@@ -60,20 +70,20 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int 
             break;
     }
 
+    // Update previous state
+    previousState = currentState;
+
     sprite.setPosition(x, y);
     move(deltaTime, platforms, windowWidth, windowHeight);
 }
 
 void Enemy::updatePatrolling(float deltaTime) {
-    // Update patrol movement between patrolStartX and patrolEndX
     if (x <= patrolStartX) {
         x = patrolStartX;
-        speedX = std::abs(speedX);  // Move right
-        sprite.setTexture(walkingTexture);
+        speedX = std::abs(speedX);  
     } else if (x >= patrolEndX) {
         x = patrolEndX;
-        speedX = -std::abs(speedX);  // Move left
-        sprite.setTexture(walkingTexture);
+        speedX = -std::abs(speedX);  
     }
     x += speedX * deltaTime;
 }
@@ -92,13 +102,48 @@ void Enemy::move(float deltaTime, const std::vector<Platform>& platforms, int wi
 }
 
 void Enemy::boundDetection(int windowWidth, int windowHeight) {
+    float enemyWidth = sprite.getGlobalBounds().width;
+    float enemyHeight = sprite.getGlobalBounds().height;
+
     if (x < 0) {
         x = 0;
-        speedX = std::abs(speedX);  // Reverse direction when reaching window boundary
+        speedX = std::abs(speedX);  
     }
+    if (x + enemyWidth > windowWidth) {
+        x = windowWidth - enemyWidth;
+    }
+
+    if (y < 0) {
+        y = 0;
+        yVelocity = 0;
+    }
+    if (y + enemyHeight > windowHeight) {
+        y = windowHeight - enemyHeight;
+        yVelocity = 0;
+    }
+
+    sprite.setPosition(x, y);
     if (x + sprite.getGlobalBounds().width > windowWidth) {
         x = windowWidth - sprite.getGlobalBounds().width;
-        speedX = -std::abs(speedX);  // Reverse direction when reaching window boundary
+        speedX = -std::abs(speedX);  
     }
+}
+
+void Enemy::setState(EnemyState newState) {
+    if (newState != currentState) {  
+        currentState = newState;
+        resetAnimation();  
+    }
+}
+
+Enemy::EnemyState Enemy::getState() const {
+    return currentState;
+}
+
+void Enemy::resetAnimation() {
+    currentFrameIndex = 0;
+    animationTimer = 0.0f;
+    currentFrame.left = 0;
+    sprite.setTextureRect(currentFrame);
 }
 

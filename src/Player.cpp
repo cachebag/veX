@@ -1,5 +1,6 @@
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
+#include "../include/Enemy.hpp"
 #include <iostream>
 
 Player::Player(float startX, float startY) 
@@ -37,10 +38,12 @@ Player::Player(float startX, float startY)
     sprite.setScale(2.0f, 2.0f);
 }
 
-void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy) {
     handleInput(deltaTime);
     applyGravity(deltaTime);
     move(deltaTime, platforms, windowWidth, windowHeight);
+
+    enemyDetection(enemy);
 
     animationTimer += deltaTime;
 
@@ -240,9 +243,24 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms, int w
     boundDetection(windowWidth, windowHeight);
 }
 
+void Player::enemyDetection(Enemy& enemy) {
+    if (sprite.getGlobalBounds().intersects(enemy.getGlobalBounds())) {
+        if (enemy.getState() != Enemy::EnemyState::IDLE) {
+            enemy.setState(Enemy::EnemyState::IDLE);  
+            std::cout << "Player collided with the enemy. Enemy stopped patrolling." << std::endl;
+        }
+    } else {
+        if (enemy.getState() != Enemy::EnemyState::PATROLLING) {
+            enemy.setState(Enemy::EnemyState::PATROLLING);  
+            std::cout << "Player moved away. Enemy resumed patrolling." << std::endl;
+        }
+    }
+}
+
 void Player::resetAnimation() {
     currentFrameIndex = 0;
     animationTimer = 0.0f;
     currentFrame.left = 0;
     sprite.setTextureRect(currentFrame);
 }
+
