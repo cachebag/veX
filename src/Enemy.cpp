@@ -8,7 +8,7 @@ Enemy::Enemy(float startX, float startY)
       yVelocity(0.0f), 
       gravity(2000.0f), 
       terminalVelocity(1000.0f), 
-      speedX(200.0f),  
+      speedX(0.0f),  // Enemy doesn't move
       orbCount(0), 
       walkingTexture(),  
       idleTexture(),     
@@ -18,31 +18,27 @@ Enemy::Enemy(float startX, float startY)
       animationTimer(0.0f), 
       frameDuration(0.1f), 
       isIdle(true), 
-      currentState(EnemyState::PATROLLING), 
-      previousState(EnemyState::PATROLLING), 
-      patrolStartX(startX - 200.0f),  
-      patrolEndX(startX + 200.0f),    
-      aggroRange(300.0f)
+      currentState(EnemyState::IDLE), 
+      previousState(EnemyState::IDLE)
 {
-    if (!idleTexture.loadFromFile("assets/characters/enemies/wrathborn.png")) {
-        std::cerr << "Error loading idle texture file" << std::endl;
-    }
+    // Load the walking texture
     if (!walkingTexture.loadFromFile("assets/characters/enemies/wrathborn_sprite_sheet.png")) {
         std::cerr << "Error loading walking texture file" << std::endl;
     }
-    
-    // Set initial sprite and frame
+
+    // Set the walking texture as the active texture even in idle state
     sprite.setTexture(walkingTexture);
     currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);
     sprite.setTextureRect(currentFrame);
-
-    sprite.setPosition(x, y);
+    
+    sprite.setPosition(startX, startY);  // Enemy's position will be based on main.cpp
     sprite.setScale(2.0f, 2.0f);  
 }
 
 void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
     animationTimer += deltaTime;
 
+    // Update animation frames to play the walking animation even when idle
     if (animationTimer >= frameDuration) {
         currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
         currentFrame.left = currentFrameIndex * frameWidth;
@@ -50,83 +46,20 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int 
         animationTimer = 0.0f;
     }
 
-    switch (currentState) {
-        case EnemyState::IDLE:
-            if (previousState != currentState) {
-                sprite.setTexture(idleTexture); 
-                resetAnimation();
-            }
-            break;
-        case EnemyState::PATROLLING:
-            updatePatrolling(deltaTime);
-            if (previousState != currentState) {
-                sprite.setTexture(walkingTexture);  
-                resetAnimation();
-            }
-            break;
-        case EnemyState::AGGRO:
-            break;
-        case EnemyState::ATTACKING:
-            break;
-    }
-
-    // Update previous state
-    previousState = currentState;
-
+    // Ensure the enemy stays idle at the current position
     sprite.setPosition(x, y);
-    move(deltaTime, platforms, windowWidth, windowHeight);
-}
-
-void Enemy::updatePatrolling(float deltaTime) {
-    if (x <= patrolStartX) {
-        x = patrolStartX;
-        speedX = std::abs(speedX);  
-    } else if (x >= patrolEndX) {
-        x = patrolEndX;
-        speedX = -std::abs(speedX);  
-    }
-    x += speedX * deltaTime;
 }
 
 void Enemy::draw(sf::RenderWindow& window) const {
-    window.draw(sprite);
+    window.draw(sprite);  // Draw the sprite
 }
 
 sf::FloatRect Enemy::getGlobalBounds() const {
-    return sprite.getGlobalBounds();
+    return sprite.getGlobalBounds();  // Get the bounding box for collision
 }
 
 void Enemy::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
-    sprite.setPosition(x, y);
-    boundDetection(windowWidth, windowHeight);
-}
-
-void Enemy::boundDetection(int windowWidth, int windowHeight) {
-    float enemyWidth = sprite.getGlobalBounds().width;
-    float enemyHeight = sprite.getGlobalBounds().height;
-
-    if (x < 0) {
-        x = 0;
-        speedX = std::abs(speedX);  
-    }
-    if (x + enemyWidth > windowWidth) {
-        x = windowWidth - enemyWidth;
-    }
-
-    if (y < 0) {
-        y = 0;
-        yVelocity = 0;
-    }
-    if (y + enemyHeight > windowHeight) {
-        y = windowHeight - enemyHeight;
-        yVelocity = 0;
-    }
-
-    sprite.setPosition(x, y);
-    if (x + sprite.getGlobalBounds().width > windowWidth) {
-        x = windowWidth - sprite.getGlobalBounds().width;
-        speedX = -std::abs(speedX);  
-    }
+    // No movement for the idle state
 }
 
 void Enemy::setState(EnemyState newState) {

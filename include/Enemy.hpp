@@ -12,7 +12,7 @@ public:
         ATTACKING
     };
 
-    Enemy(float startX = 500.0f, float startY = 500.0f);
+    Enemy(float startX = 500.0f, float startY = 500.0f);  // Use startX and startY from main.cpp
 
     void update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
     void draw(sf::RenderWindow& window) const;
@@ -47,12 +47,8 @@ private:
 
     EnemyState currentState;  
     EnemyState previousState; 
-    float patrolStartX, patrolEndX; 
-    float aggroRange; 
 
-    void updatePatrolling(float deltaTime);
     void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
-    void boundDetection(int windowWidth, int windowHeight);
     void resetAnimation();
 };
 
