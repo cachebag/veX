@@ -60,8 +60,12 @@ else()
     set_target_properties(nfd PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/libnfd.a)
 endif()
 
-# Link SFML, NFD, and GTK3 libraries
-target_link_libraries(game sfml-system sfml-window sfml-graphics nfd ${GTK3_LIBRARIES})
+# Find X11 and Xtst libraries
+find_package(X11 REQUIRED)
+find_library(XTST_LIB Xtst REQUIRED)
+
+# Link SFML, NFD, GTK3, X11, and Xtst libraries
+target_link_libraries(game sfml-system sfml-window sfml-graphics nfd ${GTK3_LIBRARIES} ${X11_LIBRARIES} ${XTST_LIB})
 
 # Ensure GTK3 linking flags are correctly applied (provided by pkg-config)
 target_link_options(game PRIVATE ${GTK3_LDFLAGS})

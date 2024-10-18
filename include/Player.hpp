@@ -15,6 +15,10 @@ public:
     void collectOrb();
     int getOrbCount() const;
 
+    // New methods to get and set position
+    sf::Vector2f getPosition() const;
+    void setPosition(float newX, float newY);
+
 private:
     float x, y;               
     float prevX, prevY;        
