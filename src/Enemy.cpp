@@ -40,7 +40,7 @@ Enemy::Enemy(float startX, float startY)
     sprite.setScale(2.0f, 2.0f);  
 }
 
-void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, float scaleFactor) {
     animationTimer += deltaTime;
 
     if (animationTimer >= frameDuration) {
@@ -70,11 +70,10 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int 
             break;
     }
 
-    // Update previous state
     previousState = currentState;
 
     sprite.setPosition(x, y);
-    move(deltaTime, platforms, windowWidth, windowHeight);
+    move(deltaTime, platforms, windowWidth, windowHeight, scaleFactor);
 }
 
 void Enemy::updatePatrolling(float deltaTime) {
@@ -96,7 +95,7 @@ sf::FloatRect Enemy::getGlobalBounds() const {
     return sprite.getGlobalBounds();
 }
 
-void Enemy::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+void Enemy::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, float scaleFactor) {
     sprite.setPosition(x, y);
     boundDetection(windowWidth, windowHeight);
 }

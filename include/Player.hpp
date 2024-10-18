@@ -8,7 +8,7 @@ class Player {
 public:
     Player(float startX = 0.0f, float startY = 500.0f);
 
-    void update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy);
+    void update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy, float scaleFactor);  // Added scaleFactor
     void draw(sf::RenderWindow& window) const;
     sf::FloatRect getGlobalBounds() const;
 
@@ -50,7 +50,7 @@ private:
 
     void handleInput(float deltaTime);
     void applyGravity(float deltaTime);
-    void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
+    void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, float scaleFactor);  // Added scaleFactor
     void boundDetection(int windowWidth, int windowHeight);
     void enemyDetection(Enemy& enemy);  
     void resetAnimation();

@@ -38,10 +38,10 @@ Player::Player(float startX, float startY)
     sprite.setScale(2.0f, 2.0f);
 }
 
-void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy) {
+void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy, float scaleFactor) {
     handleInput(deltaTime);
     applyGravity(deltaTime);
-    move(deltaTime, platforms, windowWidth, windowHeight);
+    move(deltaTime, platforms, windowWidth, windowHeight, scaleFactor);
 
     enemyDetection(enemy);
 
@@ -186,7 +186,7 @@ void Player::boundDetection(int windowWidth, int windowHeight) {
     sprite.setPosition(x, y);
 }
 
-void Player::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+void Player::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, float scaleFactor) {
     y += yVelocity * deltaTime;
 
     sf::FloatRect playerBounds = sprite.getGlobalBounds();

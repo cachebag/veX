@@ -14,7 +14,7 @@ public:
 
     Enemy(float startX = 500.0f, float startY = 500.0f);
 
-    void update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
+    void update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, float scaleFactor);  // Added scaleFactor
     void draw(sf::RenderWindow& window) const;
     sf::FloatRect getGlobalBounds() const;
 
@@ -51,7 +51,7 @@ private:
     float aggroRange; 
 
     void updatePatrolling(float deltaTime);
-    void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
+    void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, float scaleFactor);  // Added scaleFactor
     void boundDetection(int windowWidth, int windowHeight);
     void resetAnimation();
 };

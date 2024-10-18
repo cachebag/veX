@@ -45,7 +45,6 @@ void Platform::draw(sf::RenderWindow& window) {
     }
 }
 
-// Rescale the platform when window is resized
 void Platform::rescale(float scaleX, float scaleY) {
     for (auto& tile : tiles) {
         tile.setScale(scaleX, scaleY);

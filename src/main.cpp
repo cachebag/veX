@@ -13,18 +13,25 @@
 
 enum class GameMode { Play, Edit };
 
-void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float gridSize) {
-    sf::RectangleShape line(sf::Vector2f(viewSize.x, 1.0f));
+float getScalingFactor(sf::RenderWindow& window, const sf::Vector2f& baseResolution) {
+    sf::Vector2u currentSize = window.getSize();
+    float scaleX = static_cast<float>(currentSize.x) / baseResolution.x;
+    float scaleY = static_cast<float>(currentSize.y) / baseResolution.y;
+    return std::min(scaleX, scaleY);  // Keep uniform scaling
+}
+
+void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float gridSize, float scaleFactor) {
+    sf::RectangleShape line(sf::Vector2f(viewSize.x, 1.0f * scaleFactor));
     line.setFillColor(sf::Color(255, 255, 255, 100));
 
-    for (float y = 0; y < viewSize.y; y += gridSize) {
+    for (float y = 0; y < viewSize.y; y += gridSize * scaleFactor) {
         line.setPosition(0, y);
         window.draw(line);
     }
 
-    line.setSize(sf::Vector2f(1.0f, viewSize.y));
+    line.setSize(sf::Vector2f(1.0f * scaleFactor, viewSize.y));
 
-    for (float x = 0; x < viewSize.x; x += gridSize) {
+    for (float x = 0; x < viewSize.x; x += gridSize * scaleFactor) {
         line.setPosition(x, 0);
         window.draw(line);
     }
@@ -45,83 +52,47 @@ void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePo
         std::cerr << "Error: " << NFD_GetError() << std::endl;
     }
 
-    #ifdef __APPLE__
-        window.create(sf::VideoMode(1920, 1080, 32), "veX", sf::Style::None);
-    #else
-        window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
-    #endif
+    window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
 }
 
-std::vector<sf::Vector2f> loadLevelFromFile(const std::string& filepath, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize) {
+std::vector<sf::Vector2f> loadLevelFromFile(const std::string& filepath, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize, float scaleFactor) {
     std::vector<sf::Vector2f> tiles;
     std::ifstream inFile(filepath);
     float x, y;
     platforms.clear();
     while (inFile >> x >> y) {
-        sf::Vector2f pos(x, y);
+        sf::Vector2f pos(x * scaleFactor, y * scaleFactor);  // Scale positions
         tiles.push_back(pos);
-        platforms.emplace_back(x, y, gridSize, gridSize, tileTexture);
+        platforms.emplace_back(pos.x, pos.y, gridSize * scaleFactor, gridSize * scaleFactor, tileTexture);
     }
     inFile.close();
     return tiles;
 }
 
-std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize) {
-    window.create(sf::VideoMode(1280, 720), "veX - Loading...", sf::Style::Close);
-
-    std::vector<sf::Vector2f> tiles;
-    nfdchar_t* outPath = nullptr;
-    nfdresult_t result = NFD_OpenDialog("txt", nullptr, &outPath);
-    if (result == NFD_OKAY) {
-        std::ifstream inFile(outPath);
-        float x, y;
-        platforms.clear();
-        while (inFile >> x >> y) {
-            sf::Vector2f pos(x, y);
-            tiles.push_back(pos);
-            platforms.emplace_back(x, y, gridSize, gridSize, tileTexture);
-        }
-        inFile.close();
-    } else if (result != NFD_CANCEL) {
-        std::cerr << "Error: " << NFD_GetError() << std::endl;
-    }
-
-    #ifdef __APPLE__
-        window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::None);
-    #else
-        window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::None);
-    #endif
-
-    return tiles;
-}
-
-void updateView(sf::RenderWindow& window, sf::View& view) {
+void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2f& baseResolution) {
     sf::Vector2u windowSize = window.getSize();
-
-    float baseWidth = 1920.0f;
-    float baseHeight = 1080.0f;
-    
     float windowAspectRatio = static_cast<float>(windowSize.x) / windowSize.y;
-    float internalAspectRatio = baseWidth / baseHeight;
+    float baseAspectRatio = baseResolution.x / baseResolution.y;
 
-    if (windowAspectRatio > internalAspectRatio) {
-        float viewportWidth = internalAspectRatio / windowAspectRatio;
+    if (windowAspectRatio > baseAspectRatio) {
+        float viewportWidth = baseAspectRatio / windowAspectRatio;
         view.setViewport(sf::FloatRect((1.0f - viewportWidth) / 2.0f, 0.0f, viewportWidth, 1.0f));
     } else {
-        float viewportHeight = windowAspectRatio / internalAspectRatio;
+        float viewportHeight = windowAspectRatio / baseAspectRatio;
         view.setViewport(sf::FloatRect(0.0f, (1.0f - viewportHeight) / 2.0f, 1.0f, viewportHeight));
     }
 
-    view.setSize(baseWidth, baseHeight);
-    view.setCenter(baseWidth / 2.0f, baseHeight / 2.0f);
+    view.setSize(baseResolution);
+    view.setCenter(baseResolution.x / 2.0f, baseResolution.y / 2.0f);
     window.setView(view);
 }
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(1366, 768), "veX", sf::Style::Fullscreen);  
+    const sf::Vector2f baseResolution(1920.0f, 1080.0f);
 
+    sf::RenderWindow window(sf::VideoMode(1366, 768), "veX", sf::Style::Fullscreen);
     sf::View view;
-    updateView(window, view);
+    updateView(window, view, baseResolution);
 
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
@@ -147,7 +118,8 @@ int main() {
     const float gridSize = 64.0f;
     std::vector<Platform> platforms;
 
-    std::vector<sf::Vector2f> tilePositions = loadLevelFromFile("levels/level1.txt", platforms, tileTexture, gridSize);
+    float scaleFactor = getScalingFactor(window, baseResolution);  // Calculate scaling factor
+    std::vector<sf::Vector2f> tilePositions = loadLevelFromFile("levels/level1.txt", platforms, tileTexture, gridSize, scaleFactor);
 
     while (window.isOpen()) {
         sf::Event event;
@@ -158,7 +130,8 @@ int main() {
             }
 
             if (event.type == sf::Event::Resized) {
-                updateView(window, view);
+                updateView(window, view, baseResolution);
+                scaleFactor = getScalingFactor(window, baseResolution);  // Update scaling factor on resize
             }
 
             if (event.type == sf::Event::KeyPressed) {
@@ -172,7 +145,7 @@ int main() {
                     saveLevel(window, tilePositions);
                 }
                 if (event.key.code == sf::Keyboard::L) {
-                    tilePositions = loadLevel(window, platforms, tileTexture, gridSize);
+                    tilePositions = loadLevelFromFile("levels/level1.txt", platforms, tileTexture, gridSize, scaleFactor);
                 }
             }
 
@@ -180,13 +153,13 @@ int main() {
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
 
-                sf::Vector2f tilePos(static_cast<float>(static_cast<int>(worldPos.x / gridSize) * gridSize),
-                                     static_cast<float>(static_cast<int>(worldPos.y / gridSize) * gridSize));
+                sf::Vector2f tilePos(static_cast<float>(static_cast<int>(worldPos.x / (gridSize * scaleFactor)) * (gridSize * scaleFactor)),
+                                     static_cast<float>(static_cast<int>(worldPos.y / (gridSize * scaleFactor)) * (gridSize * scaleFactor)));
 
                 if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
                     if (std::find(tilePositions.begin(), tilePositions.end(), tilePos) == tilePositions.end()) {
                         tilePositions.push_back(tilePos);
-                        platforms.emplace_back(tilePos.x, tilePos.y, gridSize, gridSize, tileTexture);
+                        platforms.emplace_back(tilePos.x, tilePos.y, gridSize * scaleFactor, gridSize * scaleFactor, tileTexture);
                     }
                 }
 
@@ -209,18 +182,19 @@ int main() {
         for (const auto& pos : tilePositions) {
             sf::Sprite tile(tileTexture);
             tile.setPosition(pos);
+            tile.setScale(scaleFactor, scaleFactor);  // Apply scaling to tiles
             window.draw(tile);
         }
 
         if (currentMode == GameMode::Play) {
-            player->update(deltaTime, platforms, window.getSize().x, window.getSize().y, *enemy);
-            enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
+            player->update(deltaTime, platforms, window.getSize().x, window.getSize().y, *enemy, scaleFactor);
+            enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y, scaleFactor);
             player->draw(window);
             enemy->draw(window);
         }
 
         if (currentMode == GameMode::Edit && debugMode) {
-            drawGrid(window, view.getSize(), gridSize);
+            drawGrid(window, view.getSize(), gridSize, scaleFactor);  // Apply scaling to the grid
         }
 
         window.display();
@@ -228,3 +202,4 @@ int main() {
 
     return 0;
 }
+
