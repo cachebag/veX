@@ -13,11 +13,11 @@
 #include "../include/Platform.hpp"
 
 enum class GameMode { Play, Edit };
-enum class AssetType { Brick = 1, Dripstone = 2, LeftRock = 3, RightRock = 4, Tree = 5, Grassy = 6 };
+enum class AssetType { Brick = 1, Dripstone = 2, LeftRock = 3, RightRock = 4, Tree = 5, Grassy = 6, Button = 7 };
 
 bool isValidAssetType(int assetTypeInt) {
     return assetTypeInt >= static_cast<int>(AssetType::Brick) &&
-           assetTypeInt <= static_cast<int>(AssetType::Grassy); // Include Grassy asset
+           assetTypeInt <= static_cast<int>(AssetType::Button);
 }
 
 void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float gridSize) {
@@ -167,7 +167,8 @@ int main() {
         !textures[AssetType::LeftRock].loadFromFile("assets/tutorial_level/left_rock.png") ||
         !textures[AssetType::RightRock].loadFromFile("assets/tutorial_level/right_rock.png") ||
         !textures[AssetType::Tree].loadFromFile("assets/tutorial_level/tree.png") ||
-        !textures[AssetType::Grassy].loadFromFile("assets/tutorial_level/grassy.png")) {
+        !textures[AssetType::Grassy].loadFromFile("assets/tutorial_level/grassy.png") ||
+        !textures[AssetType::Button].loadFromFile("assets/tutorial_level/button.png")){
         std::cerr << "Error loading tile textures." << std::endl;
         return -1;
     }
@@ -209,6 +210,7 @@ int main() {
                 if (event.key.code == sf::Keyboard::Num4) currentAsset = AssetType::RightRock;
                 if (event.key.code == sf::Keyboard::Num5) currentAsset = AssetType::Tree;
                 if (event.key.code == sf::Keyboard::Num6) currentAsset = AssetType::Grassy;
+                if (event.key.code == sf::Keyboard::Num7) currentAsset = AssetType::Button;
             }
             if (currentMode == GameMode::Edit) {
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);

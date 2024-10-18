@@ -122,7 +122,7 @@ void Player::handleInput(float deltaTime) {
     prevX = x;
     prevY = y;
 
-    x += velocityX * deltaTime;
+        x += velocityX * deltaTime;
 
     if (yVelocity >= 0) {
         isJumping = false;
@@ -137,6 +137,11 @@ void Player::handleInput(float deltaTime) {
         }
     }
 
+    if (!isMoving && !isJumping) {
+        sprite.setTexture(idleTexture);
+        isIdle = true;
+    }
+
     if (isJumping) {
         sprite.setTexture(jumpTexture);
         resetAnimation();
@@ -144,7 +149,6 @@ void Player::handleInput(float deltaTime) {
         sprite.setTexture(walkingTexture);
     }
 }
-
 void Player::applyGravity(float deltaTime) {
     if (yVelocity > 0) {
         yVelocity += gravity * fallMultiplier * deltaTime;
