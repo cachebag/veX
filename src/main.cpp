@@ -174,7 +174,7 @@ int main() {
     }
     sf::Clock clock;
     std::unique_ptr<Player> player = std::make_unique<Player>(0, 500);
-    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(1700, 800);
+    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(1600, 600);
     GameMode currentMode = GameMode::Play;
     bool debugMode = false;
     const float gridSize = 64.0f;

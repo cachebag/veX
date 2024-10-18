@@ -29,7 +29,7 @@ Enemy::Enemy(float startX, float startY)
     currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);
     sprite.setTextureRect(currentFrame);
     sprite.setPosition(startX, startY);
-    sprite.setScale(2.0f, 2.0f);
+    sprite.setScale(4.0f, 4.0f);
 }
 
 void Enemy::update(float deltaTime, const std::vector<Platform>& /*platforms*/, int /*windowWidth*/, int /*windowHeight*/) {
