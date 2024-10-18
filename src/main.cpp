@@ -17,7 +17,7 @@ float getScalingFactor(sf::RenderWindow& window, const sf::Vector2f& baseResolut
     sf::Vector2u currentSize = window.getSize();
     float scaleX = static_cast<float>(currentSize.x) / baseResolution.x;
     float scaleY = static_cast<float>(currentSize.y) / baseResolution.y;
-    return std::min(scaleX, scaleY);  // Keep uniform scaling
+    return std::min(scaleX, scaleY);  // Uniform scaling
 }
 
 void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float gridSize, float scaleFactor) {
@@ -37,7 +37,7 @@ void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float grid
     }
 }
 
-void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePositions) {
+void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePositions, float scaleFactor) {
     window.create(sf::VideoMode(1280, 720), "veX - Saving...", sf::Style::Close);
 
     nfdchar_t* outPath = nullptr;
@@ -45,7 +45,7 @@ void saveLevel(sf::RenderWindow& window, const std::vector<sf::Vector2f>& tilePo
     if (result == NFD_OKAY) {
         std::ofstream outFile(outPath);
         for (const auto& tilePos : tilePositions) {
-            outFile << tilePos.x << " " << tilePos.y << "\n";
+            outFile << tilePos.x / scaleFactor << " " << tilePos.y / scaleFactor << "\n";  // Save positions scaled back to original
         }
         outFile.close();
     } else if (result != NFD_CANCEL) {
@@ -61,11 +61,27 @@ std::vector<sf::Vector2f> loadLevelFromFile(const std::string& filepath, std::ve
     float x, y;
     platforms.clear();
     while (inFile >> x >> y) {
-        sf::Vector2f pos(x * scaleFactor, y * scaleFactor);  // Scale positions
+        sf::Vector2f pos(x * scaleFactor, y * scaleFactor);  // Scale positions to match current resolution
         tiles.push_back(pos);
         platforms.emplace_back(pos.x, pos.y, gridSize * scaleFactor, gridSize * scaleFactor, tileTexture);
     }
     inFile.close();
+    return tiles;
+}
+
+std::vector<sf::Vector2f> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms, const sf::Texture& tileTexture, float gridSize, float scaleFactor) {
+    window.create(sf::VideoMode(1280, 720), "veX - Loading...", sf::Style::Close);
+
+    std::vector<sf::Vector2f> tiles;
+    nfdchar_t* outPath = nullptr;
+    nfdresult_t result = NFD_OpenDialog("txt", nullptr, &outPath);
+    if (result == NFD_OKAY) {
+        tiles = loadLevelFromFile(outPath, platforms, tileTexture, gridSize, scaleFactor);
+    } else if (result != NFD_CANCEL) {
+        std::cerr << "Error: " << NFD_GetError() << std::endl;
+    }
+
+    window.create(sf::VideoMode::getDesktopMode(), "veX", sf::Style::Fullscreen);
     return tiles;
 }
 
@@ -115,7 +131,7 @@ int main() {
     std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(1400, 800);
     GameMode currentMode = GameMode::Play;
     bool debugMode = false;
-    const float gridSize = 64.0f;
+    const float gridSize = 64.0f;  // Tile size
     std::vector<Platform> platforms;
 
     float scaleFactor = getScalingFactor(window, baseResolution);  // Calculate scaling factor
@@ -142,10 +158,10 @@ int main() {
                     debugMode = !debugMode;
                 }
                 if (event.key.code == sf::Keyboard::S) {
-                    saveLevel(window, tilePositions);
+                    saveLevel(window, tilePositions, scaleFactor);  // Save using correct scale factor
                 }
                 if (event.key.code == sf::Keyboard::L) {
-                    tilePositions = loadLevelFromFile("levels/level1.txt", platforms, tileTexture, gridSize, scaleFactor);
+                    tilePositions = loadLevel(window, platforms, tileTexture, gridSize, scaleFactor);  // Load with correct scale
                 }
             }
 
@@ -179,10 +195,11 @@ int main() {
         float deltaTime = clock.restart().asSeconds();
         background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
 
+        // Draw tiles with scaling applied
         for (const auto& pos : tilePositions) {
             sf::Sprite tile(tileTexture);
             tile.setPosition(pos);
-            tile.setScale(scaleFactor, scaleFactor);  // Apply scaling to tiles
+            tile.setScale(scaleFactor, scaleFactor);  // Scale tiles based on the scaleFactor
             window.draw(tile);
         }
 
