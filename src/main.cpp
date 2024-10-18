@@ -118,7 +118,7 @@ void updateView(sf::RenderWindow& window, sf::View& view) {
 }
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(1366, 768), "veX", sf::Style::Fullscreen);  
+    sf::RenderWindow window(sf::VideoMode(1920, 1200), "veX", sf::Style::Fullscreen);  
 
     sf::View view;
     updateView(window, view);
