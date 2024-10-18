@@ -18,12 +18,11 @@ Platform::Platform(float x, float y, float width, float height, const sf::Textur
         }
     }
 
-    // If this is a grassy block, make only the bottom part solid
     if (isGrassy) {
-        float solidHeight = tileHeight - 16; // Only bottom part is solid, top 16px is grass
-        collisionBounds = sf::FloatRect(x, y + 16, width, solidHeight);  // Set bounds starting after 16px of grass
+        float solidHeight = tileHeight - 16; 
+        collisionBounds = sf::FloatRect(x, y + 16, width, solidHeight);  
     } else {
-        collisionBounds = sf::FloatRect(x, y, width, height);  // Normal collision bounds
+        collisionBounds = sf::FloatRect(x, y, width, height);  
     }
 }
 
@@ -53,15 +52,13 @@ void Platform::draw(sf::RenderWindow& window) {
     }
 }
 
-// Rescale the platform when window is resized
 void Platform::rescale(float scaleX, float scaleY) {
     for (auto& tile : tiles) {
         tile.setScale(scaleX, scaleY);
     }
 }
 
-// Collision check function
 bool Platform::checkCollision(const sf::FloatRect& playerBounds) const {
-    return collisionBounds.intersects(playerBounds);  // Use the modified collision bounds
+    return collisionBounds.intersects(playerBounds);  
 }
 

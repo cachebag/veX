@@ -16,8 +16,8 @@ public:
     int getOrbCount() const;
 
 private:
-    float x, y;               // Current position
-    float prevX, prevY;        // Previous position for collision handling
+    float x, y;               
+    float prevX, prevY;        
     float yVelocity;
     const float gravity;
     const float terminalVelocity;

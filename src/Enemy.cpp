@@ -42,7 +42,6 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& /*platforms*/, 
         animationTimer = 0.0f;
     }
 
-    // Ensure the enemy stays idle at the current position
     sprite.setPosition(x, y);
 }
 

@@ -21,7 +21,6 @@ public:
     EnemyState getState() const;
     void setState(EnemyState newState);
 
-    // Method to check collision
     bool checkCollision(const sf::FloatRect& otherBounds) const;
 
     void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
