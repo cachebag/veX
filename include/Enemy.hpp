@@ -12,7 +12,7 @@ public:
         ATTACKING
     };
 
-    Enemy(float startX = 500.0f, float startY = 500.0f);  // Use startX and startY from main.cpp
+    Enemy(float startX = 500.0f, float startY = 500.0f);
 
     void update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
     void draw(sf::RenderWindow& window) const;
@@ -21,17 +21,22 @@ public:
     EnemyState getState() const;
     void setState(EnemyState newState);
 
-private:
-    float x, y; 
-    float yVelocity; 
-    const float gravity; 
-    const float terminalVelocity; 
-    float speedX; 
+    // Method to check collision
+    bool checkCollision(const sf::FloatRect& otherBounds) const;
 
-    int orbCount; 
+    void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
+
+private:
+    float x, y;
+    float yVelocity;
+    const float gravity;
+    const float terminalVelocity;
+    float speedX;
+
+    int orbCount;
 
     sf::Texture walkingTexture;
-    sf::Texture idleTexture; 
+    sf::Texture idleTexture;
     sf::Sprite sprite;
     sf::IntRect currentFrame;
 
@@ -45,10 +50,9 @@ private:
     int totalFrames = 6;
     const int idleTotalFrames = 3;
 
-    EnemyState currentState;  
-    EnemyState previousState; 
+    EnemyState currentState;
+    EnemyState previousState;
 
-    void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
     void resetAnimation();
 };
 

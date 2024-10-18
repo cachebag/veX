@@ -16,7 +16,8 @@ public:
     int getOrbCount() const;
 
 private:
-    float x, y;
+    float x, y;               // Current position
+    float prevX, prevY;        // Previous position for collision handling
     float yVelocity;
     const float gravity;
     const float terminalVelocity;
@@ -50,7 +51,7 @@ private:
 
     void handleInput(float deltaTime);
     void applyGravity(float deltaTime);
-    void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
+    void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy);
     void boundDetection(int windowWidth, int windowHeight);
     void enemyDetection(Enemy& enemy);  
     void resetAnimation();

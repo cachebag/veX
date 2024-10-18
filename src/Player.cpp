@@ -3,8 +3,9 @@
 #include "../include/Enemy.hpp"
 #include <iostream>
 
-Player::Player(float startX, float startY) 
+Player::Player(float startX, float startY)
     : x(startX), y(startY), 
+      prevX(startX), prevY(startY), 
       yVelocity(0.0f), gravity(2000.0f), terminalVelocity(1000.0f), 
       speedX(600.0f), jumpVelocity(-1100.0f), 
       jumpCount(0), maxJumps(2), 
@@ -31,7 +32,7 @@ Player::Player(float startX, float startY)
     
     sprite.setTexture(idleTexture);
 
-    currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);  
+    currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);
     sprite.setTextureRect(currentFrame);
 
     sprite.setPosition(x, y);
@@ -41,9 +42,7 @@ Player::Player(float startX, float startY)
 void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy) {
     handleInput(deltaTime);
     applyGravity(deltaTime);
-    move(deltaTime, platforms, windowWidth, windowHeight);
-
-    enemyDetection(enemy);
+    move(deltaTime, platforms, windowWidth, windowHeight, enemy);
 
     animationTimer += deltaTime;
 
@@ -120,6 +119,9 @@ void Player::handleInput(float deltaTime) {
         }
     }
 
+    prevX = x;
+    prevY = y;
+
     x += velocityX * deltaTime;
 
     if (yVelocity >= 0) {
@@ -133,11 +135,6 @@ void Player::handleInput(float deltaTime) {
             resetAnimation();
             isIdle = true;
         }
-    }
-
-    if (!isMoving && !isJumping) {
-        sprite.setTexture(idleTexture);
-        isIdle = true;
     }
 
     if (isJumping) {
@@ -186,7 +183,7 @@ void Player::boundDetection(int windowWidth, int windowHeight) {
     sprite.setPosition(x, y);
 }
 
-void Player::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+void Player::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy) {
     y += yVelocity * deltaTime;
 
     sf::FloatRect playerBounds = sprite.getGlobalBounds();
@@ -234,6 +231,21 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms, int w
         }
     }
 
+    sf::FloatRect enemyBounds = enemy.getGlobalBounds();
+    if (playerBounds.intersects(enemyBounds)) {
+        if (prevX < enemyBounds.left && x + playerBounds.width > enemyBounds.left) {
+            x = enemyBounds.left - playerBounds.width;
+        } else if (prevX > enemyBounds.left && x < enemyBounds.left + enemyBounds.width) {
+            x = enemyBounds.left + enemyBounds.width;
+        }
+
+        if (prevY < enemyBounds.top && y + playerBounds.height <= enemyBounds.top + 5) {
+            y = enemyBounds.top - playerBounds.height;
+            yVelocity = 0.0f;
+            onGround = true;
+        }
+    }
+
     if (onGround) {
         jumpCount = 0;
         canJump = true;
@@ -244,15 +256,13 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms, int w
 }
 
 void Player::enemyDetection(Enemy& enemy) {
-    if (sprite.getGlobalBounds().intersects(enemy.getGlobalBounds())) {
+    if (enemy.getGlobalBounds().intersects(sprite.getGlobalBounds())) {
         if (enemy.getState() != Enemy::EnemyState::IDLE) {
             enemy.setState(Enemy::EnemyState::IDLE);  
-            std::cout << "Player collided with the enemy. Enemy stopped patrolling." << std::endl;
         }
     } else {
         if (enemy.getState() != Enemy::EnemyState::PATROLLING) {
             enemy.setState(Enemy::EnemyState::PATROLLING);  
-            std::cout << "Player moved away. Enemy resumed patrolling." << std::endl;
         }
     }
 }
