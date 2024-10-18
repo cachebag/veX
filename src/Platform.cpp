@@ -1,7 +1,7 @@
 #include "../include/Platform.hpp"
 #include <cmath>
 
-Platform::Platform(float x, float y, float width, float height, const sf::Texture& texture) {
+Platform::Platform(float x, float y, float width, float height, const sf::Texture& texture, bool isGrassy) {
     float tileWidth = static_cast<float>(texture.getSize().x);
     float tileHeight = static_cast<float>(texture.getSize().y);
 
@@ -16,6 +16,14 @@ Platform::Platform(float x, float y, float width, float height, const sf::Textur
             tile.setTextureRect(sf::IntRect(0, 0, static_cast<int>(tileWidth), static_cast<int>(tileHeight)));
             tiles.push_back(tile);  
         }
+    }
+
+    // If this is a grassy block, make only the bottom part solid
+    if (isGrassy) {
+        float solidHeight = tileHeight - 16; // Only bottom part is solid, top 16px is grass
+        collisionBounds = sf::FloatRect(x, y + 16, width, solidHeight);  // Set bounds starting after 16px of grass
+    } else {
+        collisionBounds = sf::FloatRect(x, y, width, height);  // Normal collision bounds
     }
 }
 
@@ -50,5 +58,10 @@ void Platform::rescale(float scaleX, float scaleY) {
     for (auto& tile : tiles) {
         tile.setScale(scaleX, scaleY);
     }
+}
+
+// Collision check function
+bool Platform::checkCollision(const sf::FloatRect& playerBounds) const {
+    return collisionBounds.intersects(playerBounds);  // Use the modified collision bounds
 }
 

@@ -72,7 +72,7 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevelFromFile(const std::str
             sf::Texture tileTexture = textureIt->second;
             sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
             if (assetType != AssetType::Tree) {
-                platforms.emplace_back(pos.x, pos.y, size.x, size.y, tileTexture);
+                platforms.emplace_back(pos.x, pos.y, size.x, size.y, tileTexture, assetType == AssetType::Grassy); // Check for grassy block
             }
         } else {
             std::cerr << "Error: Texture for asset type " << assetTypeInt << " not found.\n";
@@ -113,7 +113,7 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevel(sf::RenderWindow& wind
                     sf::Texture tileTexture = textureIt->second;
                     sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
                     if (assetType != AssetType::Tree) {
-                        platforms.emplace_back(pos.x, pos.y, size.x, size.y, tileTexture);
+                        platforms.emplace_back(pos.x, pos.y, size.x, size.y, tileTexture, assetType == AssetType::Grassy);
                     }
                 } else {
                     std::cerr << "Error: Texture for asset type " << assetTypeInt << " not found.\n";
@@ -162,7 +162,7 @@ int main() {
                           "assets/tutorial_level/middleground.png",
                           "assets/tutorial_level/mountains.png", sf::Vector2u(1920, 1080));
     std::map<AssetType, sf::Texture> textures;
-    if (!textures[AssetType::Brick].loadFromFile("assets/tutorial_level/brick.png") ||
+    if (!textures[AssetType::Brick].loadFromFile("assets/tutorial_level/left_grass.png") ||
         !textures[AssetType::Dripstone].loadFromFile("assets/tutorial_level/dripstone.png") ||
         !textures[AssetType::LeftRock].loadFromFile("assets/tutorial_level/left_rock.png") ||
         !textures[AssetType::RightRock].loadFromFile("assets/tutorial_level/right_rock.png") ||
@@ -220,11 +220,16 @@ int main() {
                 if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
                     if (std::find_if(tilePositions.begin(), tilePositions.end(), 
                         [&](const std::pair<sf::Vector2f, AssetType>& tile) { return tile.first == tilePos; }) == tilePositions.end()) {
+
                         tilePositions.emplace_back(tilePos, currentAsset);
-                        if (currentAsset != AssetType::Tree) {
-                            sf::Texture tileTexture = textures[currentAsset];
-                            sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
-                            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture);
+                        
+                        sf::Texture tileTexture = textures[currentAsset];
+                        sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
+
+                        if (currentAsset == AssetType::Grassy) {
+                            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, true); // Grassy block
+                        } else {
+                            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, false); // Normal block
                         }
                     }
                 }
@@ -234,9 +239,7 @@ int main() {
                     if (it != tilePositions.end()) {
                         int index = std::distance(tilePositions.begin(), it);
                         tilePositions.erase(it);
-                        if (currentAsset != AssetType::Tree) {
-                            platforms.erase(platforms.begin() + index);
-                        }
+                        platforms.erase(platforms.begin() + index);
                     }
                 }
             }

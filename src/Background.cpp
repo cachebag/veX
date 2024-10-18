@@ -116,7 +116,7 @@ void Background::render(sf::RenderWindow& window, const sf::Vector2u& windowSize
 
     float middlegroundParallaxFactor = 0.3f;
     static float middlegroundScrollOffset = 0.0f;
-    float middlegroundScrollSpeed = 6.0f;
+    float middlegroundScrollSpeed = 0.5f;
 
     middlegroundScrollOffset += middlegroundScrollSpeed * deltaTime;
 
