@@ -141,21 +141,30 @@ void enableMouse() {
 
 class ButtonInteraction {
 public:
-    ButtonInteraction() : showingText(false), displayDuration(5), timerStart(std::chrono::steady_clock::now()) {
-    if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
-        std::cerr << "Failed to load font\n";
+    ButtonInteraction() : promptVisible(true), showingText(false), displayDuration(5), timerStart(std::chrono::steady_clock::now()) {
+        if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
+            std::cerr << "Failed to load font\n";
+        }
+        text.setFont(font);
+        text.setCharacterSize(24);
+        text.setFillColor(sf::Color::White);
     }
-    text.setFont(font);
-    text.setCharacterSize(24);
-    text.setFillColor(sf::Color::White);
-}
 
     void handleInteraction(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, sf::RenderWindow& window) {
+        bool nearButton = false;
+
         for (const auto& tile : tilePositions) {
             if (tile.second == AssetType::Button && distance(playerPos, tile.first) < 100.0f) {
+                nearButton = true;
+                if (promptVisible) {
+                    text.setString("Press F to prompt the sentinel...");
+                    text.setPosition(playerPos.x, playerPos.y - 50);
+                }
+                
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
-                    showingText = true;
                     timerStart = std::chrono::steady_clock::now();
+                    showingText = true;
+                    promptVisible = false;
                     text.setString("Are you a liar? Or do you tell the truth?");
                     text.setPosition(playerPos.x - 250, playerPos.y - 50);
                 }
@@ -167,9 +176,12 @@ public:
             float elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - timerStart).count();
             if (elapsed >= displayDuration) {
                 showingText = false;
-            } else {
-                window.draw(text);
+                promptVisible = true;
             }
+        }
+
+        if ((nearButton && promptVisible) || showingText) {
+            window.draw(text);
         }
     }
 
@@ -178,6 +190,7 @@ private:
     sf::Text text;
     bool showingText;
     int displayDuration;
+    bool promptVisible;
     std::chrono::steady_clock::time_point timerStart;
 
     float distance(const sf::Vector2f& a, const sf::Vector2f& b) {
