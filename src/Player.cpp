@@ -39,6 +39,11 @@ Player::Player(float startX, float startY)
     sprite.setScale(2.0f, 2.0f);
 }
 
+sf::Vector2f Player::getPosition() const {
+    return sprite.getPosition();  // Returns the current position of the player
+}
+
+
 void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy) {
     handleInput(deltaTime);
     applyGravity(deltaTime);
@@ -270,6 +275,8 @@ void Player::enemyDetection(Enemy& enemy) {
         }
     }
 }
+
+
 
 void Player::resetAnimation() {
     currentFrameIndex = 0;

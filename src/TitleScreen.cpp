@@ -34,20 +34,38 @@ void TitleScreen::loadAssets() {
 }
 
 void TitleScreen::handleInput() {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-        currentSelection = (currentSelection + 1) % 3;
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-        currentSelection = (currentSelection - 1 + 3) % 3;
+    static sf::Clock clock;
+    if (clock.getElapsedTime().asSeconds() > 0.2f) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+            currentSelection = (currentSelection + 1) % 3;
+            clock.restart();
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+            currentSelection = (currentSelection - 1 + 3) % 3;
+            clock.restart();
+        }
     }
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {
         if (currentSelection == 0) {
-            // Start Game
         } else if (currentSelection == 1) {
-            // Open Options
         } else if (currentSelection == 2) {
             window.close();
+        }
+    }
+
+    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+    for (int i = 0; i < 3; ++i) {
+        if (menuOptions[i].getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos))) {
+            currentSelection = i;
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                if (currentSelection == 0) {
+                    return;
+                } else if (currentSelection == 1) {
+                } else if (currentSelection == 2) {
+                    window.close();
+                }
+            }
         }
     }
 }
@@ -65,14 +83,11 @@ void TitleScreen::update(float deltaTime) {
 
 void TitleScreen::render() {
     window.clear();
-    
     background.render(window, sf::Vector2u(1920, 1080), 0, 0);  
-
     window.draw(gameTitle);
     for (int i = 0; i < 3; ++i) {
         window.draw(menuOptions[i]);
     }
-
     window.display();
 }
 

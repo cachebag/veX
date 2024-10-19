@@ -4,8 +4,10 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <cmath>
 #include <map>
 #include <fstream>
+#include <chrono>
 #include "../include/TitleScreen.hpp"
 #include "../include/nfd.h"
 #include "../include/Player.hpp"
@@ -137,8 +139,53 @@ void enableMouse() {
     XCloseDisplay(display);
 }
 
+class ButtonInteraction {
+public:
+    ButtonInteraction() : showingText(false), displayDuration(5), timerStart(std::chrono::steady_clock::now()) {
+    if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
+        std::cerr << "Failed to load font\n";
+    }
+    text.setFont(font);
+    text.setCharacterSize(24);
+    text.setFillColor(sf::Color::White);
+}
+
+    void handleInteraction(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, sf::RenderWindow& window) {
+        for (const auto& tile : tilePositions) {
+            if (tile.second == AssetType::Button && distance(playerPos, tile.first) < 100.0f) {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
+                    showingText = true;
+                    timerStart = std::chrono::steady_clock::now();
+                    text.setString("Are you a liar? Or do you tell the truth?");
+                    text.setPosition(playerPos.x - 250, playerPos.y - 50);
+                }
+            }
+        }
+
+        if (showingText) {
+            auto now = std::chrono::steady_clock::now();
+            float elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - timerStart).count();
+            if (elapsed >= displayDuration) {
+                showingText = false;
+            } else {
+                window.draw(text);
+            }
+        }
+    }
+
+private:
+    sf::Font font;
+    sf::Text text;
+    bool showingText;
+    int displayDuration;
+    std::chrono::steady_clock::time_point timerStart;
+
+    float distance(const sf::Vector2f& a, const sf::Vector2f& b) {
+        return std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+    }
+};
+
 int main() {
-    disableMouse();
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
 
@@ -157,9 +204,9 @@ int main() {
     const float gridSize = 64.0f;
     std::vector<Platform> platforms;
     std::map<AssetType, sf::Texture> textures;
-    
+
     AssetType currentAsset = AssetType::Brick;
-    
+
     if (!textures[AssetType::Brick].loadFromFile("assets/tutorial_level/left_grass.png") ||
         !textures[AssetType::Dripstone].loadFromFile("assets/tutorial_level/dripstone.png") ||
         !textures[AssetType::LeftRock].loadFromFile("assets/tutorial_level/left_rock.png") ||
@@ -169,12 +216,14 @@ int main() {
         !textures[AssetType::Button].loadFromFile("assets/tutorial_level/button.png")) {
         return -1;
     }
-    
+
     Background background("assets/tutorial_level/background.png",
                           "assets/tutorial_level/middleground.png",
                           "assets/tutorial_level/mountains.png", sf::Vector2u(1920, 1080));
 
     std::vector<std::pair<sf::Vector2f, AssetType>> tilePositions = loadLevel(window, platforms, textures, true);
+
+    ButtonInteraction buttonInteraction;
 
     while (window.isOpen()) {
         sf::Event event;
@@ -185,14 +234,15 @@ int main() {
             }
 
             if (gameState == GameState::Title) {
+                enableMouse();
                 titleScreen.handleInput();
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {
-                    if (titleScreen.currentSelection == 0) {
-                        gameState = GameState::Play;
-                    } else if (titleScreen.currentSelection == 2) {
-                        gameState = GameState::Exit;
-                        window.close();
-                    }
+
+                if (titleScreen.currentSelection == 0 && (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
+                    gameState = GameState::Play;
+                    disableMouse();
+                } else if (titleScreen.currentSelection == 2 && (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
+                    gameState = GameState::Exit;
+                    window.close();
                 }
             }
 
@@ -282,6 +332,8 @@ int main() {
                 enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
                 player->draw(window);
                 enemy->draw(window);
+
+                buttonInteraction.handleInteraction(player->getPosition(), tilePositions, window);
             }
 
             if (currentMode == GameMode::Edit && debugMode) {
