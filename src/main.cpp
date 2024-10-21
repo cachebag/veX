@@ -248,6 +248,7 @@ public:
 
         if (ascent) {
             if (enemyBounds.top > -500.0f) {
+                ascent = true;
                 enemy->setPosition(enemyBounds.left, enemyBounds.top - 500.0f * deltaTime);
             } else {
                 ascent = false;
