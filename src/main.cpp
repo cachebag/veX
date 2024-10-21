@@ -8,6 +8,7 @@
 #include <map>
 #include <fstream>
 #include <chrono>
+#include <random>
 #include "../include/TitleScreen.hpp"
 #include "../include/nfd.h"
 #include "../include/Player.hpp"
@@ -141,7 +142,7 @@ void enableMouse() {
 
 class ButtonInteraction {
 public:
-    ButtonInteraction() : promptVisible(true), showingText(false), displayDuration(5), timerStart(std::chrono::steady_clock::now()) {
+    ButtonInteraction() : showingText(false), promptVisible(true), displayDuration(5), timerStart(std::chrono::steady_clock::now()) {
         if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
             std::cerr << "Failed to load font\n";
         }
@@ -150,7 +151,7 @@ public:
         text.setFillColor(sf::Color::White);
     }
 
-    void handleInteraction(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, sf::RenderWindow& window) {
+    void handleInteraction(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, sf::RenderWindow& window, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned) {
         bool nearButton = false;
 
         for (const auto& tile : tilePositions) {
@@ -160,13 +161,15 @@ public:
                     text.setString("Press F to prompt the sentinel...");
                     text.setPosition(playerPos.x, playerPos.y - 50);
                 }
-                
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !enemySpawned) {
                     timerStart = std::chrono::steady_clock::now();
                     showingText = true;
                     promptVisible = false;
-                    text.setString("Are you a liar? Or do you tell the truth?");
-                    text.setPosition(playerPos.x - 250, playerPos.y - 50);
+                    enemyTriggered = true;
+                    enemyDescending = true;
+                    enemySpawned = true;
+                    text.setString("");
                 }
             }
         }
@@ -176,7 +179,6 @@ public:
             float elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - timerStart).count();
             if (elapsed >= displayDuration) {
                 showingText = false;
-                promptVisible = true;
             }
         }
 
@@ -185,12 +187,16 @@ public:
         }
     }
 
+    void resetPrompt() {
+        promptVisible = true;
+  }
+
 private:
     sf::Font font;
     sf::Text text;
     bool showingText;
-    int displayDuration;
     bool promptVisible;
+    int displayDuration;
     std::chrono::steady_clock::time_point timerStart;
 
     float distance(const sf::Vector2f& a, const sf::Vector2f& b) {
@@ -198,9 +204,115 @@ private:
     }
 };
 
+class SentinelInteraction {
+public:
+    SentinelInteraction() 
+        : questionVisible(false), ascent(false), awaitingResponse(false), responseComplete(false), 
+          enemyGone(false), rng(rd()), dist(0, 1) {
+        
+        if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
+            std::cerr << "Failed to load font\n";
+        }
+
+        playerOptions.setFont(font);
+        playerOptions.setCharacterSize(24);
+        playerOptions.setFillColor(sf::Color::White);
+    }
+
+    void triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned, 
+                            std::unique_ptr<Enemy>& enemy, float deltaTime, const sf::Vector2f& playerPos, ButtonInteraction buttonInteraction) {
+        if (enemyGone) return;
+
+        if (!enemyTriggered) return;
+
+        sf::FloatRect enemyBounds = enemy->getGlobalBounds();
+        float targetYPosition = 600.0f;
+
+        if (enemyBounds.top < targetYPosition && !ascent) {
+            enemy->setPosition(enemyBounds.left, enemyBounds.top + 500.0f * deltaTime);
+        } else if (!ascent && !responseComplete) {
+            enemyDescending = false;
+            questionVisible = true;
+            text.setString("What do you seek by summoning me?");
+            text.setPosition(1400, 500);
+
+            playerOptions.setString("Q: Nothing, go away \n T: Will your next response be a lie?");
+            playerOptions.setPosition(playerPos.x, playerPos.y - 50);
+
+            awaitingResponse = true;
+        }
+
+        if (questionVisible && awaitingResponse) {
+            handleInput(text, enemyTriggered, enemySpawned, buttonInteraction);
+        }
+
+        if (ascent) {
+            if (enemyBounds.top > -500.0f) {
+                enemy->setPosition(enemyBounds.left, enemyBounds.top - 500.0f * deltaTime);
+            } else {
+                ascent = false;
+                enemySpawned = false;
+                questionVisible = false;
+                responseComplete = false;
+                enemyGone = true;
+                buttonInteraction.resetPrompt();
+            }
+        }
+
+        if (awaitingResponse) {
+            window.draw(playerOptions);
+        }
+    }
+
+private:
+    sf::Font font;
+    sf::Text playerOptions;
+    bool questionVisible;
+    bool ascent;
+    bool awaitingResponse;
+    bool responseComplete;
+    bool enemyGone;
+    std::random_device rd;
+    std::mt19937 rng;
+    std::uniform_int_distribution<int> dist;
+
+    void handleInput(sf::Text& text, bool& enemyTriggered, bool& enemySpawned, ButtonInteraction& buttonInteraction) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
+            questionVisible = false;
+            ascent = true;
+            awaitingResponse = false;
+            responseComplete = true;
+            text.setString("");
+
+            enemyTriggered = false;
+            enemySpawned = true;
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !responseComplete) {
+            int response = dist(rng);
+            if (response == 0) {
+                text.setString("I am an honest sentinel.");
+            } else {
+                text.setString("I am a dishonest sentinel.");
+            }
+            questionVisible = false;
+            awaitingResponse = false;
+            responseComplete = true;
+        }
+    }
+};
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
+
+    sf::Font font;
+    if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
+        std::cerr << "Failed to load font\n";
+    }
+
+    sf::Text text;
+    text.setFont(font);
+    text.setCharacterSize(24);
+    text.setFillColor(sf::Color::White);
 
     sf::View view;
     updateView(window, view);
@@ -210,7 +322,7 @@ int main() {
     GameState gameState = GameState::Title;
     sf::Clock clock;
     std::unique_ptr<Player> player = std::make_unique<Player>(0, 500);
-    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(1600, 600);
+    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(1600, -500);
 
     GameMode currentMode = GameMode::Play;
     bool debugMode = false;
@@ -237,6 +349,11 @@ int main() {
     std::vector<std::pair<sf::Vector2f, AssetType>> tilePositions = loadLevel(window, platforms, textures, true);
 
     ButtonInteraction buttonInteraction;
+    SentinelInteraction sentinelInteraction;
+
+    bool enemyTriggered = false;
+    bool enemyDescending = false;
+    bool enemySpawned = false;
 
     while (window.isOpen()) {
         sf::Event event;
@@ -340,13 +457,16 @@ int main() {
                 window.draw(tile);
             }
 
+            sentinelInteraction.triggerInteraction(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, player->getPosition(), buttonInteraction);
+            window.draw(text);
+
             if (currentMode == GameMode::Play) {
                 player->update(deltaTime, platforms, window.getSize().x, window.getSize().y, *enemy);
                 enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
                 player->draw(window);
                 enemy->draw(window);
 
-                buttonInteraction.handleInteraction(player->getPosition(), tilePositions, window);
+                buttonInteraction.handleInteraction(player->getPosition(), tilePositions, window, enemyTriggered, enemyDescending, enemySpawned);
             }
 
             if (currentMode == GameMode::Edit && debugMode) {

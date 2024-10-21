@@ -25,6 +25,9 @@ public:
 
     void move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight);
 
+    sf::Vector2f getPosition() const;
+    void setPosition(float newX, float newY);
+
 private:
     float x, y;
     float yVelocity;

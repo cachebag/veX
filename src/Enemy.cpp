@@ -32,7 +32,7 @@ Enemy::Enemy(float startX, float startY)
     sprite.setScale(4.0f, 4.0f);
 }
 
-void Enemy::update(float deltaTime, const std::vector<Platform>& /*platforms*/, int /*windowWidth*/, int /*windowHeight*/) {
+void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
     animationTimer += deltaTime;
 
     if (animationTimer >= frameDuration) {
@@ -57,8 +57,7 @@ bool Enemy::checkCollision(const sf::FloatRect& otherBounds) const {
     return this->getGlobalBounds().intersects(otherBounds);
 }
 
-void Enemy::move(float /*deltaTime*/, const std::vector<Platform>& /*platforms*/, int /*windowWidth*/, int /*windowHeight*/) {
-    // Enemy movement logic can be added here in the future
+void Enemy::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
 }
 
 void Enemy::setState(EnemyState newState) {
@@ -77,5 +76,15 @@ void Enemy::resetAnimation() {
     animationTimer = 0.0f;
     currentFrame.left = 0;
     sprite.setTextureRect(currentFrame);
+}
+
+sf::Vector2f Enemy::getPosition() const {
+    return sprite.getPosition();
+}
+
+void Enemy::setPosition(float newX, float newY) {
+    sprite.setPosition(newX, newY);
+    x = newX;
+    y = newY;
 }
 
