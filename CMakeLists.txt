@@ -43,7 +43,7 @@ add_executable(game ${SRCS})
 # Platform-specific settings and linking
 if(APPLE)
     # macOS-specific NFD library path
-    set_target_properties(nfd PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/macos/libnfd.a)
+    set_target_properties(nfd PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/libnfd.a)
 
     # Link macOS system frameworks required for SFML
     target_link_libraries(game 

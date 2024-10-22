@@ -15,12 +15,45 @@
 #include "../include/Enemy.hpp"
 #include "../include/Background.hpp"
 #include "../include/Platform.hpp"
+
+#ifdef __APPLE__
+void enableMouse(sf::RenderWindow& window) {
+    window.setMouseCursorVisible(true);
+}
+
+void disableMouse(sf::RenderWindow& window) {
+    window.setMouseCursorVisible(false);
+}
+#else
 #include <X11/Xlib.h>
 #include <X11/extensions/XTest.h>
 #include <X11/cursorfont.h>
 
-void enableMouse();
-void disableMouse();
+void enableMouse() {
+    Display* display = XOpenDisplay(nullptr);
+    Window root = DefaultRootWindow(display);
+    XUndefineCursor(display, root);
+    XFlush(display);
+    XCloseDisplay(display);
+}
+
+void disableMouse() {
+    Display* display = XOpenDisplay(nullptr);
+    Window root = DefaultRootWindow(display);
+    Cursor invisibleCursor;
+    Pixmap bitmapNoData;
+    XColor black;
+    static char noData[] = { 0,0,0,0,0,0,0,0 };
+    black.red = black.green = black.blue = 0;
+    bitmapNoData = XCreateBitmapFromData(display, root, noData, 8, 8);
+    invisibleCursor = XCreatePixmapCursor(display, bitmapNoData, bitmapNoData, &black, &black, 0, 0);
+    XDefineCursor(display, root, invisibleCursor);
+    XFreeCursor(display, invisibleCursor);
+    XFreePixmap(bitmapNoData);
+    XFlush(display);
+    XCloseDisplay(display);
+}
+#endif
 
 enum class GameMode { Play, Edit };
 enum class GameState { Title, Play, Exit };
@@ -45,7 +78,11 @@ void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float grid
 }
 
 void saveLevel(sf::RenderWindow& window, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions) {
+    #ifdef __APPLE__
+    enableMouse(window);
+    #else
     enableMouse();
+    #endif
     window.create(sf::VideoMode(1280, 720), "veX - Saving...", sf::Style::Close);
     nfdchar_t* outPath = nullptr;
     nfdresult_t result = NFD_SaveDialog("txt", nullptr, &outPath);
@@ -59,7 +96,11 @@ void saveLevel(sf::RenderWindow& window, const std::vector<std::pair<sf::Vector2
         std::cerr << "Error: " << NFD_GetError() << std::endl;
     }
     window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
+    #ifdef __APPLE__
+    disableMouse(window);
+    #else
     disableMouse();
+    #endif
 }
 
 std::vector<std::pair<sf::Vector2f, AssetType>> loadLevelFromFile(const std::string& filepath, std::vector<Platform>& platforms,
@@ -89,7 +130,11 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevelFromFile(const std::str
 
 std::vector<std::pair<sf::Vector2f, AssetType>> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms,
                                                           const std::map<AssetType, sf::Texture>& textures, bool isDefault = false) {
+    #ifdef __APPLE__
+    enableMouse(window);
+    #else
     enableMouse();
+    #endif
     window.create(sf::VideoMode(1280, 720), "veX - Loading...", sf::Style::Close);
     std::vector<std::pair<sf::Vector2f, AssetType>> tiles;
     if (isDefault) {
@@ -101,8 +146,12 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevel(sf::RenderWindow& wind
             tiles = loadLevelFromFile(outPath, platforms, textures);
         }
     }
-    window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
+    window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::Default);
+    #ifdef __APPLE__
+    disableMouse(window);
+    #else
     disableMouse();
+    #endif
     return tiles;
 }
 
@@ -113,31 +162,6 @@ void updateView(sf::RenderWindow& window, sf::View& view) {
     view.setSize(baseWidth, baseHeight);
     view.setCenter(baseWidth / 2.0f, baseHeight / 2.0f);
     window.setView(view);
-}
-
-void disableMouse() {
-    Display* display = XOpenDisplay(nullptr);
-    Window root = DefaultRootWindow(display);
-    Cursor invisibleCursor;
-    Pixmap bitmapNoData;
-    XColor black;
-    static char noData[] = { 0,0,0,0,0,0,0,0 };
-    black.red = black.green = black.blue = 0;
-    bitmapNoData = XCreateBitmapFromData(display, root, noData, 8, 8);
-    invisibleCursor = XCreatePixmapCursor(display, bitmapNoData, bitmapNoData, &black, &black, 0, 0);
-    XDefineCursor(display, root, invisibleCursor);
-    XFreeCursor(display, invisibleCursor);
-    XFreePixmap(display, bitmapNoData);
-    XFlush(display);
-    XCloseDisplay(display);
-}
-
-void enableMouse() {
-    Display* display = XOpenDisplay(nullptr);
-    Window root = DefaultRootWindow(display);
-    XUndefineCursor(display, root);
-    XFlush(display);
-    XCloseDisplay(display);
 }
 
 class ButtonInteraction {
@@ -189,7 +213,7 @@ public:
 
     void resetPrompt() {
         promptVisible = true;
-  }
+    }
 
 private:
     sf::Font font;
@@ -200,7 +224,7 @@ private:
     std::chrono::steady_clock::time_point timerStart;
 
     float distance(const sf::Vector2f& a, const sf::Vector2f& b) {
-        return std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+        return std::sqrt((a.x - b.x) * (a.x - b.y));
     }
 };
 
@@ -302,7 +326,7 @@ private:
 };
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
+    sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Default);
     window.setFramerateLimit(60);
 
     sf::Font font;
@@ -365,12 +389,20 @@ int main() {
             }
 
             if (gameState == GameState::Title) {
+                #ifdef __APPLE__
+                enableMouse(window);
+                #else
                 enableMouse();
+                #endif
                 titleScreen.handleInput();
 
                 if (titleScreen.currentSelection == 0 && (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
                     gameState = GameState::Play;
+                    #ifdef __APPLE__
+                    disableMouse(window);
+                    #else
                     disableMouse();
+                    #endif
                 } else if (titleScreen.currentSelection == 2 && (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
                     gameState = GameState::Exit;
                     window.close();
@@ -381,9 +413,17 @@ int main() {
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::E) {
                     currentMode = (currentMode == GameMode::Play) ? GameMode::Edit : GameMode::Play;
                     if (currentMode == GameMode::Edit) {
+                        #ifdef __APPLE__
+                        enableMouse(window);
+                        #else
                         enableMouse();
+                        #endif
                     } else {
+                        #ifdef __APPLE__
+                        disableMouse(window);
+                        #else
                         disableMouse();
+                        #endif
                     }
                 }
 
