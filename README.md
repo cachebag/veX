@@ -72,7 +72,8 @@ To compile the project:
 ### Notes
 
 - You can't run the game in the build directory. You will need to cd back into root and run ./build/veX
-- This project was developed on Linux. It *should* work on macOS, but you'll need to recompile `nfd` (Native File Dialog) and ensure that the Cocoa framework is properly linked during the build process. If you're on windows, good luck. Maybe WSL?
+- This project was developed on Linux. It *should* work on macOS, but you'll need to recompile `nfd` (Native File Dialog) and ensure that the Cocoa framework is properly linked during the build process. (I do have a branch configured to work on MacOS but it is pretty unstable).
+- If you're on Windows, good luck. Maybe WSL?
 
 
 
