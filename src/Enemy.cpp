@@ -33,6 +33,9 @@ Enemy::Enemy(float startX, float startY)
 }
 
 void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+    (void)platforms;
+    (void)windowWidth;  
+    (void)windowHeight;
     animationTimer += deltaTime;
 
     if (animationTimer >= frameDuration) {
@@ -58,6 +61,10 @@ bool Enemy::checkCollision(const sf::FloatRect& otherBounds) const {
 }
 
 void Enemy::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+    (void)deltaTime;
+    (void)platforms;
+    (void)windowWidth;
+    (void)windowHeight;
 }
 
 void Enemy::setState(EnemyState newState) {
@@ -83,8 +90,8 @@ sf::Vector2f Enemy::getPosition() const {
 }
 
 void Enemy::setPosition(float newX, float newY) {
-    sprite.setPosition(newX, newY);
-    x = newX;
-    y = newY;
+    x = newX; // Update x
+    y = newY; // Update y
+    sprite.setPosition(x, y); // Set sprite position
 }
 

@@ -121,13 +121,13 @@ void disableMouse() {
     Cursor invisibleCursor;
     Pixmap bitmapNoData;
     XColor black;
-    static char noData[] = { 0,0,0,0,0,0,0,0 };
+    static char noData[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     black.red = black.green = black.blue = 0;
     bitmapNoData = XCreateBitmapFromData(display, root, noData, 8, 8);
     invisibleCursor = XCreatePixmapCursor(display, bitmapNoData, bitmapNoData, &black, &black, 0, 0);
     XDefineCursor(display, root, invisibleCursor);
     XFreeCursor(display, invisibleCursor);
-    XFreePixmap(display, bitmapNoData);
+    XFreePixmap(display, bitmapNoData); // Include display argument
     XFlush(display);
     XCloseDisplay(display);
 }
@@ -189,7 +189,7 @@ public:
 
     void resetPrompt() {
         promptVisible = true;
-  }
+    }
 
 private:
     sf::Font font;
@@ -208,7 +208,7 @@ class SentinelInteraction {
 public:
     SentinelInteraction() 
         : questionVisible(false), ascent(false), awaitingResponse(false), responseComplete(false), 
-          enemyGone(false), rng(rd()), dist(0, 1) {
+          rng(rd()), dist(0, 1) {
         
         if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
             std::cerr << "Failed to load font\n";
@@ -219,17 +219,22 @@ public:
         playerOptions.setFillColor(sf::Color::White);
     }
 
-    void triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned, 
-                            std::unique_ptr<Enemy>& enemy, float deltaTime, const sf::Vector2f& playerPos, ButtonInteraction buttonInteraction) {
-        if (enemyGone) return;
+    void resetState() {
+        questionVisible = false;
+        ascent = false;
+        awaitingResponse = false;
+        responseComplete = false;
+    }
 
+    void triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned, 
+                            std::unique_ptr<Enemy>& enemy, float deltaTime, const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction) {
         if (!enemyTriggered) return;
 
         sf::FloatRect enemyBounds = enemy->getGlobalBounds();
         float targetYPosition = 600.0f;
 
-        if (enemyBounds.top < targetYPosition && !ascent) {
-            enemy->setPosition(enemyBounds.left, enemyBounds.top + 500.0f * deltaTime);
+        if (!ascent && enemyBounds.top < targetYPosition) {
+            enemy->setPosition(enemy->getPosition().x, enemy->getPosition().y + 500.0f * deltaTime);
         } else if (!ascent && !responseComplete) {
             enemyDescending = false;
             questionVisible = true;
@@ -241,22 +246,20 @@ public:
 
             awaitingResponse = true;
         }
-
+        
         if (questionVisible && awaitingResponse) {
             handleInput(text, enemyTriggered, enemySpawned, buttonInteraction);
         }
 
         if (ascent) {
-            if (enemyBounds.top > -500.0f) {
-                ascent = true;
-                enemy->setPosition(enemyBounds.left, enemyBounds.top - 500.0f * deltaTime);
-            } else {
-                ascent = false;
+            enemy->setPosition(enemy->getPosition().x, enemy->getPosition().y - 500.0f * deltaTime);
+            if (enemy->getPosition().y < -500.0f) {
+                enemy->setPosition(1600, -500);
+                resetState();
+                enemyTriggered = false;
                 enemySpawned = false;
-                questionVisible = false;
-                responseComplete = false;
-                enemyGone = true;
                 buttonInteraction.resetPrompt();
+                text.setString("Was the sentinel telling the truth?");
             }
         }
 
@@ -272,35 +275,33 @@ private:
     bool ascent;
     bool awaitingResponse;
     bool responseComplete;
-    bool enemyGone;
     std::random_device rd;
     std::mt19937 rng;
     std::uniform_int_distribution<int> dist;
 
     void handleInput(sf::Text& text, bool& enemyTriggered, bool& enemySpawned, ButtonInteraction& buttonInteraction) {
+        (void)enemySpawned;
+        (void)enemyTriggered;
+        (void)buttonInteraction;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
             questionVisible = false;
             ascent = true;
             awaitingResponse = false;
-            responseComplete = true;
             text.setString("");
-
-            enemyTriggered = false;
-            enemySpawned = true;
         } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !responseComplete) {
             int response = dist(rng);
             if (response == 0) {
-                text.setString("I am an honest sentinel.");
+                text.setString("It will.");
             } else {
-                text.setString("I am a dishonest sentinel.");
+                text.setString("No, I am an honest sentinel.");
             }
             questionVisible = false;
             awaitingResponse = false;
             responseComplete = true;
+            ascent = true;
         }
     }
 };
-
 int main() {
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
@@ -480,4 +481,3 @@ int main() {
 
     return 0;
 }
-
