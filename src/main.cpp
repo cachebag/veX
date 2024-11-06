@@ -55,8 +55,6 @@ void saveLevel(sf::RenderWindow& window, const std::vector<std::pair<sf::Vector2
             outFile << tileData.first.x << " " << tileData.first.y << " " << static_cast<int>(tileData.second) << "\n";
         }
         outFile.close();
-    } else if (result != NFD_CANCEL) {
-        std::cerr << "Error: " << NFD_GetError() << std::endl;
     }
     window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
     disableMouse();
@@ -127,7 +125,7 @@ void disableMouse() {
     invisibleCursor = XCreatePixmapCursor(display, bitmapNoData, bitmapNoData, &black, &black, 0, 0);
     XDefineCursor(display, root, invisibleCursor);
     XFreeCursor(display, invisibleCursor);
-    XFreePixmap(display, bitmapNoData); // Include display argument
+    XFreePixmap(display, bitmapNoData);
     XFlush(display);
     XCloseDisplay(display);
 }
@@ -140,6 +138,8 @@ void enableMouse() {
     XCloseDisplay(display);
 }
 
+bool interactionInProgress = false;
+
 class ButtonInteraction {
 public:
     ButtonInteraction() : showingText(false), promptVisible(true), displayDuration(5), timerStart(std::chrono::steady_clock::now()) {
@@ -151,24 +151,26 @@ public:
         text.setFillColor(sf::Color::White);
     }
 
-    void handleInteraction(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, sf::RenderWindow& window, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned) {
+    void handleInteraction(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions,
+                           sf::RenderWindow& window, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned) {
         bool nearButton = false;
 
         for (const auto& tile : tilePositions) {
             if (tile.second == AssetType::Button && distance(playerPos, tile.first) < 100.0f) {
                 nearButton = true;
-                if (promptVisible) {
+                if (promptVisible && !interactionInProgress) {
                     text.setString("Press F to prompt the sentinel...");
                     text.setPosition(playerPos.x, playerPos.y - 50);
                 }
 
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !enemySpawned) {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !enemySpawned && !interactionInProgress) {
                     timerStart = std::chrono::steady_clock::now();
                     showingText = true;
                     promptVisible = false;
                     enemyTriggered = true;
                     enemyDescending = true;
                     enemySpawned = true;
+                    interactionInProgress = true;
                     text.setString("");
                 }
             }
@@ -189,6 +191,7 @@ public:
 
     void resetPrompt() {
         promptVisible = true;
+        interactionInProgress = false;
     }
 
 private:
@@ -206,10 +209,10 @@ private:
 
 class SentinelInteraction {
 public:
-    SentinelInteraction() 
-        : questionVisible(false), ascent(false), awaitingResponse(false), responseComplete(false), 
-          rng(rd()), dist(0, 1) {
-        
+    SentinelInteraction()
+        : questionVisible(false), ascent(false), awaitingResponse(false), responseComplete(false), awaitingFinalAnswer(false),
+          shouldAskFinalQuestion(false), rng(rd()), dist(0, 1) {
+
         if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
             std::cerr << "Failed to load font\n";
         }
@@ -224,12 +227,42 @@ public:
         ascent = false;
         awaitingResponse = false;
         responseComplete = false;
+        awaitingFinalAnswer = false;
+        shouldAskFinalQuestion = false;
     }
 
-    void triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned, 
-                            std::unique_ptr<Enemy>& enemy, float deltaTime, const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction) {
+    void triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
+                            bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
+                            const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction) {
         if (!enemyTriggered) return;
 
+        if (awaitingFinalAnswer && shouldAskFinalQuestion) {
+            handleFinalAnswer(text, interactionInProgress, buttonInteraction, enemyTriggered);
+            return;
+        }
+
+        handleInitialInteraction(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, playerPos, buttonInteraction);
+    }
+
+private:
+    sf::Font font;
+    sf::Text playerOptions;
+    bool questionVisible;
+    bool ascent;
+    bool awaitingResponse;
+    bool responseComplete;
+    bool awaitingFinalAnswer;
+    bool shouldAskFinalQuestion;
+    std::random_device rd;
+    std::mt19937 rng;
+    std::uniform_int_distribution<int> dist;
+    bool sentinelTruth;
+    sf::Clock messageDisplayTimer;
+    sf::Time messageDisplayDuration;
+
+    void handleInitialInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
+                                  bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
+                                  const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction) {
         sf::FloatRect enemyBounds = enemy->getGlobalBounds();
         float targetYPosition = 600.0f;
 
@@ -241,25 +274,30 @@ public:
             text.setString("What do you seek by summoning me?");
             text.setPosition(1400, 500);
 
-            playerOptions.setString("Q: Nothing, go away \n T: Will your next response be a lie?");
+            playerOptions.setString("Q: Nothing, go away \nT: Will your next response be a lie?");
             playerOptions.setPosition(playerPos.x, playerPos.y - 50);
 
             awaitingResponse = true;
         }
-        
+
         if (questionVisible && awaitingResponse) {
-            handleInput(text, enemyTriggered, enemySpawned, buttonInteraction);
+            handleQuestionResponse(text, enemyTriggered);
         }
 
         if (ascent) {
             enemy->setPosition(enemy->getPosition().x, enemy->getPosition().y - 500.0f * deltaTime);
             if (enemy->getPosition().y < -500.0f) {
                 enemy->setPosition(1600, -500);
-                resetState();
-                enemyTriggered = false;
-                enemySpawned = false;
-                buttonInteraction.resetPrompt();
-                text.setString("Was the sentinel telling the truth?");
+                if (shouldAskFinalQuestion) {
+                    text.setString("Was the sentinel telling the truth? (Y/N)");
+                    awaitingFinalAnswer = true;
+                } else {
+                    resetState();
+                    //enemyTriggered = false;
+                    //enemySpawned = false;
+                    interactionInProgress = false;
+                    buttonInteraction.resetPrompt();
+                }
             }
         }
 
@@ -268,40 +306,63 @@ public:
         }
     }
 
-private:
-    sf::Font font;
-    sf::Text playerOptions;
-    bool questionVisible;
-    bool ascent;
-    bool awaitingResponse;
-    bool responseComplete;
-    std::random_device rd;
-    std::mt19937 rng;
-    std::uniform_int_distribution<int> dist;
-
-    void handleInput(sf::Text& text, bool& enemyTriggered, bool& enemySpawned, ButtonInteraction& buttonInteraction) {
-        (void)enemySpawned;
-        (void)enemyTriggered;
-        (void)buttonInteraction;
+    void handleQuestionResponse(sf::Text& text, bool& enemyTriggered) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
             questionVisible = false;
             ascent = true;
             awaitingResponse = false;
+            shouldAskFinalQuestion = false;
             text.setString("");
         } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !responseComplete) {
-            int response = dist(rng);
-            if (response == 0) {
-                text.setString("It will.");
-            } else {
+            sentinelTruth = dist(rng) == 1;
+            if (sentinelTruth) {
                 text.setString("No, I am an honest sentinel.");
+                enemyTriggered = false;
+            } else {
+                text.setString("It will.");
             }
             questionVisible = false;
             awaitingResponse = false;
             responseComplete = true;
             ascent = true;
+            shouldAskFinalQuestion = true;
         }
     }
+
+    void checkAnswer(bool playerAnswer, sf::Text& text, bool& interactionInProgress, ButtonInteraction& buttonInteraction, bool& enemyTriggered) {
+    bool correctAnswer;
+    if (sentinelTruth) {
+        correctAnswer = true;
+    } else {
+        correctAnswer = false;
+    }
+
+    if (playerAnswer == correctAnswer) {
+        text.setString("Correct. You may proceed.");
+    } else {
+        text.setString("Incorrect. The sentinel vanishes...");
+        enemyTriggered = false;
+    }
+
+    messageDisplayTimer.restart();
+    messageDisplayDuration = sf::seconds(2.0f); 
+
+    resetState();
+    interactionInProgress = false;
+    buttonInteraction.resetPrompt();
+}
+
+    void handleFinalAnswer(sf::Text& text, bool& interactionInProgress, ButtonInteraction& buttonInteraction, bool& enemyTriggered) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Y)) {
+            checkAnswer(true, text, interactionInProgress, buttonInteraction, enemyTriggered);
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N)) {
+            checkAnswer(false, text, interactionInProgress, buttonInteraction, enemyTriggered);
+        }
+    }
+
+    void triggerNextLevel() {}
 };
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
@@ -360,7 +421,7 @@ int main() {
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed || 
+            if (event.type == sf::Event::Closed ||
                 (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
                 window.close();
             }
@@ -481,3 +542,4 @@ int main() {
 
     return 0;
 }
+
