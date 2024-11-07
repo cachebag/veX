@@ -76,8 +76,9 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevelFromFile(const std::str
         if (textureIt != textures.end()) {
             const sf::Texture& tileTexture = textureIt->second;
             sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
-            if (assetType != AssetType::Tree) {
-                platforms.emplace_back(pos.x, pos.y, size.x, size.y, tileTexture, assetType == AssetType::Grassy);
+            if (assetType != AssetType::Tree && assetType != AssetType::Button) {
+                bool isGrassy = (assetType == AssetType::Grassy);
+                platforms.emplace_back(pos.x, pos.y, size.x, size.y, tileTexture, isGrassy);
             }
         }
     }
@@ -139,10 +140,11 @@ void enableMouse() {
 }
 
 bool interactionInProgress = false;
+bool resetSentinelInteraction = false;
 
 class ButtonInteraction {
 public:
-    ButtonInteraction() : showingText(false), promptVisible(true), displayDuration(5), timerStart(std::chrono::steady_clock::now()) {
+    ButtonInteraction() : showingText(false), promptVisible(true), displayDuration(3), timerStart(std::chrono::steady_clock::now()) {
         if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
             std::cerr << "Failed to load font\n";
         }
@@ -159,19 +161,25 @@ public:
             if (tile.second == AssetType::Button && distance(playerPos, tile.first) < 100.0f) {
                 nearButton = true;
                 if (promptVisible && !interactionInProgress) {
-                    text.setString("Press F to prompt the sentinel...");
+                    if (!enemySpawned) {
+                        text.setString("Press F to prompt the sentinel...");
+                    } else {
+                        text.setString("Press F to try again...");
+                    }
                     text.setPosition(playerPos.x, playerPos.y - 50);
                 }
 
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !enemySpawned && !interactionInProgress) {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !interactionInProgress) {
                     timerStart = std::chrono::steady_clock::now();
                     showingText = true;
                     promptVisible = false;
                     enemyTriggered = true;
-                    enemyDescending = true;
+                    enemyDescending = !enemySpawned;
                     enemySpawned = true;
                     interactionInProgress = true;
                     text.setString("");
+
+                    resetSentinelInteraction = true;
                 }
             }
         }
@@ -210,8 +218,9 @@ private:
 class SentinelInteraction {
 public:
     SentinelInteraction()
-        : questionVisible(false), ascent(false), awaitingResponse(false), responseComplete(false), awaitingFinalAnswer(false),
-          shouldAskFinalQuestion(false), rng(rd()), dist(0, 1) {
+        : questionVisible(false), ascent(false), awaitingResponse(false), responseComplete(false),
+          awaitingFinalAnswer(false), sentinelHasAnswered(false), rng(rd()), dist(0, 1),
+          messageDisplayDuration(sf::seconds(3.0f)), isCorrect(false) {
 
         if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
             std::cerr << "Failed to load font\n";
@@ -228,20 +237,40 @@ public:
         awaitingResponse = false;
         responseComplete = false;
         awaitingFinalAnswer = false;
-        shouldAskFinalQuestion = false;
+        sentinelHasAnswered = false;
+        isCorrect = false;
     }
 
     void triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                             bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
-                            const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction) {
+                            const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
         if (!enemyTriggered) return;
 
-        if (awaitingFinalAnswer && shouldAskFinalQuestion) {
-            handleFinalAnswer(text, interactionInProgress, buttonInteraction, enemyTriggered);
+        if (resetSentinelInteraction) {
+            resetState();
+            resetSentinelInteraction = false;
+        }
+
+        if (ascent) {
+            handleAscentAndCleanup(enemy, text, enemyTriggered, enemySpawned, buttonInteraction, deltaTime);
             return;
         }
 
-        handleInitialInteraction(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, playerPos, buttonInteraction);
+        if (messageDisplayTimer.getElapsedTime() < messageDisplayDuration && messageDisplayTimer.getElapsedTime().asSeconds() != 0) {
+            return;
+        }
+
+        if (isCorrect && messageDisplayTimer.getElapsedTime() >= messageDisplayDuration) {
+            text.setString("");
+            proceedToNextLevel = true;
+            return;
+        }
+
+        handleInitialInteraction(window, text, enemyTriggered, enemyDescending, enemy, deltaTime, playerPos, buttonInteraction);
+    }
+
+    bool isAscending() const {
+        return ascent;
     }
 
 private:
@@ -252,115 +281,100 @@ private:
     bool awaitingResponse;
     bool responseComplete;
     bool awaitingFinalAnswer;
-    bool shouldAskFinalQuestion;
+    bool sentinelHasAnswered;
     std::random_device rd;
     std::mt19937 rng;
     std::uniform_int_distribution<int> dist;
     bool sentinelTruth;
     sf::Clock messageDisplayTimer;
     sf::Time messageDisplayDuration;
+    bool isCorrect;
 
     void handleInitialInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
-                                  bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
+                                  std::unique_ptr<Enemy>& enemy, float deltaTime,
                                   const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction) {
         sf::FloatRect enemyBounds = enemy->getGlobalBounds();
         float targetYPosition = 600.0f;
 
-        if (!ascent && enemyBounds.top < targetYPosition) {
+        if (enemyDescending && enemyBounds.top < targetYPosition) {
             enemy->setPosition(enemy->getPosition().x, enemy->getPosition().y + 500.0f * deltaTime);
-        } else if (!ascent && !responseComplete) {
+        } else {
             enemyDescending = false;
-            questionVisible = true;
-            text.setString("What do you seek by summoning me?");
-            text.setPosition(1400, 500);
 
-            playerOptions.setString("Q: Nothing, go away \nT: Will your next response be a lie?");
-            playerOptions.setPosition(playerPos.x, playerPos.y - 50);
+            if (!sentinelHasAnswered) {
+                text.setString("What do you seek by summoning me?");
+                text.setPosition(1400, 500);
+                playerOptions.setString("Q: Nothing, go away \nT: Will your next response be a lie?");
+                playerOptions.setPosition(playerPos.x, playerPos.y - 50);
+                awaitingResponse = true;
+            } else if (!responseComplete) {
+                text.setString("Was the sentinel telling the truth? (Y/N)");
 
-            awaitingResponse = true;
-        }
-
-        if (questionVisible && awaitingResponse) {
-            handleQuestionResponse(text, enemyTriggered);
-        }
-
-        if (ascent) {
-            enemy->setPosition(enemy->getPosition().x, enemy->getPosition().y - 500.0f * deltaTime);
-            if (enemy->getPosition().y < -500.0f) {
-                enemy->setPosition(1600, -500);
-                if (shouldAskFinalQuestion) {
-                    text.setString("Was the sentinel telling the truth? (Y/N)");
-                    awaitingFinalAnswer = true;
-                } else {
-                    resetState();
-                    //enemyTriggered = false;
-                    //enemySpawned = false;
-                    interactionInProgress = false;
-                    buttonInteraction.resetPrompt();
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Y)) {
+                    checkAnswer(true, text, enemyTriggered, buttonInteraction);
+                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N)) {
+                    checkAnswer(false, text, enemyTriggered, buttonInteraction);
                 }
             }
         }
 
-        if (awaitingResponse) {
+        if (awaitingResponse && !sentinelHasAnswered) {
+            handleQuestionResponse(text);
             window.draw(playerOptions);
         }
     }
 
-    void handleQuestionResponse(sf::Text& text, bool& enemyTriggered) {
+    void handleQuestionResponse(sf::Text& text) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
             questionVisible = false;
             ascent = true;
             awaitingResponse = false;
-            shouldAskFinalQuestion = false;
             text.setString("");
-        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !responseComplete) {
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !sentinelHasAnswered) {
             sentinelTruth = dist(rng) == 1;
             if (sentinelTruth) {
                 text.setString("No, I am an honest sentinel.");
-                enemyTriggered = false;
             } else {
                 text.setString("It will.");
             }
-            questionVisible = false;
+            messageDisplayTimer.restart();
+            sentinelHasAnswered = true;
             awaitingResponse = false;
+        }
+    }
+
+    void checkAnswer(bool playerAnswer, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction) {
+        if (playerAnswer == sentinelTruth) {
+            text.setString("Correct! You may proceed.");
+            isCorrect = true;
+            messageDisplayTimer.restart();
+        } else {
+            text.setString("Incorrect. Press F near the button to try again.");
             responseComplete = true;
-            ascent = true;
-            shouldAskFinalQuestion = true;
+            sentinelHasAnswered = false;
+            messageDisplayTimer.restart();
+            buttonInteraction.resetPrompt();
+            enemyTriggered = false;
         }
     }
 
-    void checkAnswer(bool playerAnswer, sf::Text& text, bool& interactionInProgress, ButtonInteraction& buttonInteraction, bool& enemyTriggered) {
-    bool correctAnswer;
-    if (sentinelTruth) {
-        correctAnswer = true;
-    } else {
-        correctAnswer = false;
-    }
+    void handleAscentAndCleanup(std::unique_ptr<Enemy>& enemy, sf::Text& text, bool& enemyTriggered,
+                                bool& enemySpawned, ButtonInteraction& buttonInteraction, float deltaTime) {
+        if (ascent) {
+            float ascentSpeed = 200.0f;
+            enemy->setPosition(enemy->getPosition().x, enemy->getPosition().y - ascentSpeed * deltaTime);
 
-    if (playerAnswer == correctAnswer) {
-        text.setString("Correct. You may proceed.");
-    } else {
-        text.setString("Incorrect. The sentinel vanishes...");
-        enemyTriggered = false;
-    }
-
-    messageDisplayTimer.restart();
-    messageDisplayDuration = sf::seconds(2.0f); 
-
-    resetState();
-    interactionInProgress = false;
-    buttonInteraction.resetPrompt();
-}
-
-    void handleFinalAnswer(sf::Text& text, bool& interactionInProgress, ButtonInteraction& buttonInteraction, bool& enemyTriggered) {
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Y)) {
-            checkAnswer(true, text, interactionInProgress, buttonInteraction, enemyTriggered);
-        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N)) {
-            checkAnswer(false, text, interactionInProgress, buttonInteraction, enemyTriggered);
+            if (enemy->getPosition().y + enemy->getGlobalBounds().height < 0) {
+                enemy->setPosition(1600, -500);
+                resetState();
+                enemyTriggered = false;
+                enemySpawned = false;
+                text.setString("");
+                buttonInteraction.resetPrompt();
+                ascent = false;
+            }
         }
     }
-
-    void triggerNextLevel() {}
 };
 
 int main() {
@@ -409,6 +423,10 @@ int main() {
                           "assets/tutorial_level/middleground.png",
                           "assets/tutorial_level/mountains.png", sf::Vector2u(1920, 1080));
 
+    Background nextLevelBackground("assets/level2/background.png",
+                                   "assets/level2/middleground.png",
+                                   "assets/level2/foreground.png", sf::Vector2u(1920, 1080));
+
     std::vector<std::pair<sf::Vector2f, AssetType>> tilePositions = loadLevel(window, platforms, textures, true);
 
     ButtonInteraction buttonInteraction;
@@ -417,6 +435,8 @@ int main() {
     bool enemyTriggered = false;
     bool enemyDescending = false;
     bool enemySpawned = false;
+    bool proceedToNextLevel = false;
+    int currentLevel = 1;
 
     while (window.isOpen()) {
         sf::Event event;
@@ -485,7 +505,7 @@ int main() {
 
                         if (currentAsset == AssetType::Grassy) {
                             platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, true);
-                        } else {
+                        } else if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button) {
                             platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, false);
                         }
                     }
@@ -497,7 +517,9 @@ int main() {
                     if (it != tilePositions.end()) {
                         int index = std::distance(tilePositions.begin(), it);
                         tilePositions.erase(it);
-                        platforms.erase(platforms.begin() + index);
+                        if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button) {
+                            platforms.erase(platforms.begin() + index);
+                        }
                     }
                 }
             }
@@ -512,7 +534,12 @@ int main() {
         } else if (gameState == GameState::Play) {
             window.clear();
             float playerX = player->getGlobalBounds().left;
-            background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
+
+            if (currentLevel == 1) {
+                background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
+            } else if (currentLevel == 2) {
+                nextLevelBackground.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
+            }
 
             for (const auto& tileData : tilePositions) {
                 sf::Sprite tile(textures.at(tileData.second));
@@ -520,12 +547,14 @@ int main() {
                 window.draw(tile);
             }
 
-            sentinelInteraction.triggerInteraction(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, player->getPosition(), buttonInteraction);
+            sentinelInteraction.triggerInteraction(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, player->getPosition(), buttonInteraction, proceedToNextLevel);
             window.draw(text);
 
             if (currentMode == GameMode::Play) {
                 player->update(deltaTime, platforms, window.getSize().x, window.getSize().y, *enemy);
-                enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
+                if (!sentinelInteraction.isAscending()) {
+                    enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
+                }
                 player->draw(window);
                 enemy->draw(window);
 
@@ -534,6 +563,15 @@ int main() {
 
             if (currentMode == GameMode::Edit && debugMode) {
                 drawGrid(window, view.getSize(), gridSize);
+            }
+
+            if (proceedToNextLevel && player->getPosition().x >= 200 && player->getPosition().y >= 500) {
+                proceedToNextLevel = false;
+                currentLevel = 2;
+                tilePositions.clear();
+                platforms.clear();
+                tilePositions = loadLevelFromFile("levels/level2.txt", platforms, textures);
+                player->setPosition(0, player->getPosition().y);
             }
 
             window.display();

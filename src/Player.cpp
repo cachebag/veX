@@ -276,6 +276,9 @@ void Player::enemyDetection(Enemy& enemy) {
     }
 }
 
+void Player::setPosition(float newX, float newY) {
+    sprite.setPosition(newX, newY); // Assuming `sprite` is your Player's SFML sprite
+}
 
 
 void Player::resetAnimation() {
