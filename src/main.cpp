@@ -565,14 +565,20 @@ int main() {
                 drawGrid(window, view.getSize(), gridSize);
             }
 
-            if (proceedToNextLevel && player->getPosition().x >= 200 && player->getPosition().y >= 500) {
+            if (proceedToNextLevel && player->getPosition().x >= window.getSize().x - 200) {
                 proceedToNextLevel = false;
                 currentLevel = 2;
                 tilePositions.clear();
                 platforms.clear();
                 tilePositions = loadLevelFromFile("levels/level2.txt", platforms, textures);
-                player->setPosition(0, player->getPosition().y);
-            }
+                player->setPosition(0, 500);
+                enemy->setPosition(1600, -500);
+                enemyTriggered = false;
+                enemySpawned = false;
+                sentinelInteraction.resetState();
+                buttonInteraction.resetPrompt();
+                updateView(window,view);
+            } 
 
             window.display();
         }
