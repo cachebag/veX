@@ -277,9 +277,21 @@ void Player::enemyDetection(Enemy& enemy) {
 }
 
 void Player::setPosition(float newX, float newY) {
-    sprite.setPosition(newX, newY); // Assuming `sprite` is your Player's SFML sprite
+    x = newX;
+    y = newY;
+    prevX = newX;
+    prevY = newY;
+    sprite.setPosition(x, y); // Assuming `sprite` is your Player's SFML sprite
 }
 
+void Player::resetState() {
+    yVelocity = 0.0f;
+    jumpCount = 0;
+    canJump = true;
+    isJumping = false;
+    isIdle = true;
+    resetAnimation(); // Since resetAnimation() is private, it can be called here
+}
 
 void Player::resetAnimation() {
     currentFrameIndex = 0;

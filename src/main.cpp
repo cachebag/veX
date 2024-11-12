@@ -105,12 +105,11 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevel(sf::RenderWindow& wind
     return tiles;
 }
 
-void updateView(sf::RenderWindow& window, sf::View& view) {
+void updateView(sf::RenderWindow& window, sf::View& view, const sf::Vector2f& playerPosition ) {
     float baseWidth = 1920.0f;
     float baseHeight = 1080.0f;
     view.setViewport(sf::FloatRect(0.0f, 0.0f, 1.0f, 1.0f));
     view.setSize(baseWidth, baseHeight);
-    view.setCenter(baseWidth / 2.0f, baseHeight / 2.0f);
     window.setView(view);
 }
 
@@ -266,7 +265,7 @@ public:
             return;
         }
 
-        handleInitialInteraction(window, text, enemyTriggered, enemyDescending, enemy, deltaTime, playerPos, buttonInteraction);
+        handleInitialInteraction(window, text, enemyTriggered, enemyDescending, enemy, deltaTime, playerPos, buttonInteraction, proceedToNextLevel);
     }
 
     bool isAscending() const {
@@ -292,7 +291,7 @@ private:
 
     void handleInitialInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                                   std::unique_ptr<Enemy>& enemy, float deltaTime,
-                                  const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction) {
+                                  const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
         sf::FloatRect enemyBounds = enemy->getGlobalBounds();
         float targetYPosition = 600.0f;
 
@@ -311,9 +310,9 @@ private:
                 text.setString("Was the sentinel telling the truth? (Y/N)");
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Y)) {
-                    checkAnswer(true, text, enemyTriggered, buttonInteraction);
+                    checkAnswer(true, text, enemyTriggered, buttonInteraction, proceedToNextLevel);
                 } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N)) {
-                    checkAnswer(false, text, enemyTriggered, buttonInteraction);
+                    checkAnswer(false, text, enemyTriggered, buttonInteraction, proceedToNextLevel);
                 }
             }
         }
@@ -343,10 +342,12 @@ private:
         }
     }
 
-    void checkAnswer(bool playerAnswer, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction) {
+    void checkAnswer(bool playerAnswer, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
         if (playerAnswer == sentinelTruth) {
             text.setString("Correct! You may proceed.");
+            ascent = true;
             isCorrect = true;
+            proceedToNextLevel = true;
             messageDisplayTimer.restart();
         } else {
             text.setString("Incorrect. Press F near the button to try again.");
@@ -361,7 +362,7 @@ private:
     void handleAscentAndCleanup(std::unique_ptr<Enemy>& enemy, sf::Text& text, bool& enemyTriggered,
                                 bool& enemySpawned, ButtonInteraction& buttonInteraction, float deltaTime) {
         if (ascent) {
-            float ascentSpeed = 200.0f;
+            float ascentSpeed = 500.0f;
             enemy->setPosition(enemy->getPosition().x, enemy->getPosition().y - ascentSpeed * deltaTime);
 
             if (enemy->getPosition().y + enemy->getGlobalBounds().height < 0) {
@@ -391,24 +392,26 @@ int main() {
     text.setCharacterSize(24);
     text.setFillColor(sf::Color::White);
 
-    sf::View view;
-    updateView(window, view);
+    // Static view setup to cover the entire window
+    sf::View view(sf::FloatRect(0, 0, 1920, 1080));
+    window.setView(view);
 
+    std::unique_ptr<Player> player = std::make_unique<Player>(0, 500);
+    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(1600, -500);
     TitleScreen titleScreen(window);
 
     GameState gameState = GameState::Title;
-    sf::Clock clock;
-    std::unique_ptr<Player> player = std::make_unique<Player>(0, 500);
-    std::unique_ptr<Enemy> enemy = std::make_unique<Enemy>(1600, -500);
-
     GameMode currentMode = GameMode::Play;
+    sf::Clock clock;
     bool debugMode = false;
     const float gridSize = 64.0f;
     std::vector<Platform> platforms;
     std::map<AssetType, sf::Texture> textures;
+    bool playerJustReset = false;
 
     AssetType currentAsset = AssetType::Brick;
 
+    // Load textures
     if (!textures[AssetType::Brick].loadFromFile("assets/tutorial_level/left_grass.png") ||
         !textures[AssetType::Dripstone].loadFromFile("assets/tutorial_level/dripstone.png") ||
         !textures[AssetType::LeftRock].loadFromFile("assets/tutorial_level/left_rock.png") ||
@@ -422,7 +425,6 @@ int main() {
     Background background("assets/tutorial_level/background.png",
                           "assets/tutorial_level/middleground.png",
                           "assets/tutorial_level/mountains.png", sf::Vector2u(1920, 1080));
-
     Background nextLevelBackground("assets/level2/background.png",
                                    "assets/level2/middleground.png",
                                    "assets/level2/foreground.png", sf::Vector2u(1920, 1080));
@@ -551,7 +553,11 @@ int main() {
             window.draw(text);
 
             if (currentMode == GameMode::Play) {
-                player->update(deltaTime, platforms, window.getSize().x, window.getSize().y, *enemy);
+                if (playerJustReset) {
+                    playerJustReset = false; // Avoid moving the player until the view has been updated
+                } else {
+                    player->update(deltaTime, platforms, window.getSize().x, window.getSize().y, *enemy);
+                }
                 if (!sentinelInteraction.isAscending()) {
                     enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
                 }
@@ -565,20 +571,25 @@ int main() {
                 drawGrid(window, view.getSize(), gridSize);
             }
 
-            if (proceedToNextLevel && player->getPosition().x >= window.getSize().x - 200) {
+            if (proceedToNextLevel && player->getPosition().x >= window.getSize().x - 75) {
                 proceedToNextLevel = false;
                 currentLevel = 2;
                 tilePositions.clear();
                 platforms.clear();
                 tilePositions = loadLevelFromFile("levels/level2.txt", platforms, textures);
-                player->setPosition(0, 500);
                 enemy->setPosition(1600, -500);
+                player->setPosition(0, 500); // Reset player position only
+
+                
+                player->resetState();
+                
+                updateView(window, view, player->getPosition());
                 enemyTriggered = false;
                 enemySpawned = false;
                 sentinelInteraction.resetState();
                 buttonInteraction.resetPrompt();
-                updateView(window,view);
-            } 
+                playerJustReset = true;
+            }
 
             window.display();
         }
