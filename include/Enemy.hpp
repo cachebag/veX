@@ -27,6 +27,7 @@ public:
 
     sf::Vector2f getPosition() const;
     void setPosition(float newX, float newY);
+    void flipSprite();
 
 private:
     float x, y;
@@ -34,6 +35,7 @@ private:
     const float gravity;
     const float terminalVelocity;
     float speedX;
+    bool isFacingRight;
 
     int orbCount;
 

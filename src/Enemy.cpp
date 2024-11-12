@@ -9,6 +9,7 @@ Enemy::Enemy(float startX, float startY)
       gravity(2000.0f),
       terminalVelocity(1000.0f),
       speedX(0.0f),
+      isFacingRight(true),
       orbCount(0),
       walkingTexture(),
       idleTexture(),
@@ -32,6 +33,13 @@ Enemy::Enemy(float startX, float startY)
     sprite.setScale(4.0f, 4.0f);
 }
 
+void Enemy::flipSprite() {
+    isFacingRight = !isFacingRight;
+    sprite.setScale(-4.0f, 4.0f);
+    sprite.setOrigin(frameWidth, 0);
+}
+
+
 void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
     (void)platforms;
     (void)windowWidth;  
@@ -47,6 +55,7 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int 
 
     sprite.setPosition(x, y);
 }
+
 
 void Enemy::draw(sf::RenderWindow& window) const {
     window.draw(sprite);
