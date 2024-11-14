@@ -18,6 +18,7 @@ public:
     // New methods to get and set position
     sf::Vector2f getPosition() const;
     void setPosition(float newX, float newY);
+    void resetState();
 
 private:
     float x, y;               

@@ -9,6 +9,7 @@ Enemy::Enemy(float startX, float startY)
       gravity(2000.0f),
       terminalVelocity(1000.0f),
       speedX(0.0f),
+      isFacingRight(true),
       orbCount(0),
       walkingTexture(),
       idleTexture(),
@@ -32,7 +33,17 @@ Enemy::Enemy(float startX, float startY)
     sprite.setScale(4.0f, 4.0f);
 }
 
+void Enemy::flipSprite() {
+    isFacingRight = !isFacingRight;
+    sprite.setScale(-4.0f, 4.0f);
+    sprite.setOrigin(frameWidth, 0);
+}
+
+
 void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+    (void)platforms;
+    (void)windowWidth;  
+    (void)windowHeight;
     animationTimer += deltaTime;
 
     if (animationTimer >= frameDuration) {
@@ -44,6 +55,7 @@ void Enemy::update(float deltaTime, const std::vector<Platform>& platforms, int 
 
     sprite.setPosition(x, y);
 }
+
 
 void Enemy::draw(sf::RenderWindow& window) const {
     window.draw(sprite);
@@ -58,6 +70,10 @@ bool Enemy::checkCollision(const sf::FloatRect& otherBounds) const {
 }
 
 void Enemy::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight) {
+    (void)deltaTime;
+    (void)platforms;
+    (void)windowWidth;
+    (void)windowHeight;
 }
 
 void Enemy::setState(EnemyState newState) {
@@ -83,8 +99,8 @@ sf::Vector2f Enemy::getPosition() const {
 }
 
 void Enemy::setPosition(float newX, float newY) {
-    sprite.setPosition(newX, newY);
-    x = newX;
-    y = newY;
+    x = newX; // Update x
+    y = newY; // Update y
+    sprite.setPosition(x, y); // Set sprite position
 }
 
