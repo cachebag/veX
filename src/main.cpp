@@ -17,6 +17,16 @@
 #include "../include/Enemy.hpp"
 #include "../include/Background.hpp"
 #include "../include/Platform.hpp"
+
+#ifdef __APPLE__
+void enableMouse(sf::RenderWindow& window) {
+    window.setMouseCursorVisible(true);
+}
+
+void disableMouse(sf::RenderWindow& window) {
+    window.setMouseCursorVisible(false);
+}
+#else
 #include <X11/Xlib.h>
 #include <X11/extensions/XTest.h>
 #include <X11/cursorfont.h>
@@ -27,6 +37,32 @@
 // Function declarations
 void enableMouse();
 void disableMouse();
+=======
+void enableMouse() {
+    Display* display = XOpenDisplay(nullptr);
+    Window root = DefaultRootWindow(display);
+    XUndefineCursor(display, root);
+    XFlush(display);
+    XCloseDisplay(display);
+}
+
+void disableMouse() {
+    Display* display = XOpenDisplay(nullptr);
+    Window root = DefaultRootWindow(display);
+    Cursor invisibleCursor;
+    Pixmap bitmapNoData;
+    XColor black;
+    static char noData[] = { 0,0,0,0,0,0,0,0 };
+    black.red = black.green = black.blue = 0;
+    bitmapNoData = XCreateBitmapFromData(display, root, noData, 8, 8);
+    invisibleCursor = XCreatePixmapCursor(display, bitmapNoData, bitmapNoData, &black, &black, 0, 0);
+    XDefineCursor(display, root, invisibleCursor);
+    XFreeCursor(display, invisibleCursor);
+    XFreePixmap(bitmapNoData);
+    XFlush(display);
+    XCloseDisplay(display);
+}
+#endif
 
 // Enums and utility functions
 enum class GameMode { Play, Edit };
@@ -53,7 +89,11 @@ void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float grid
 
 // Save level function
 void saveLevel(sf::RenderWindow& window, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions) {
+    #ifdef __APPLE__
+    enableMouse(window);
+    #else
     enableMouse();
+    #endif
     window.create(sf::VideoMode(1280, 720), "veX - Saving...", sf::Style::Close);
     nfdchar_t* outPath = nullptr;
     nfdresult_t result = NFD_SaveDialog("txt", nullptr, &outPath);
@@ -65,7 +105,11 @@ void saveLevel(sf::RenderWindow& window, const std::vector<std::pair<sf::Vector2
         outFile.close();
     }
     window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
+    #ifdef __APPLE__
+    disableMouse(window);
+    #else
     disableMouse();
+    #endif
 }
 
 // Load level from file function
@@ -96,7 +140,11 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevelFromFile(const std::str
 // Load level function
 std::vector<std::pair<sf::Vector2f, AssetType>> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms,
                                                           const std::map<AssetType, sf::Texture>& textures, bool isDefault = false) {
+    #ifdef __APPLE__
+    enableMouse(window);
+    #else
     enableMouse();
+    #endif
     window.create(sf::VideoMode(1280, 720), "veX - Loading...", sf::Style::Close);
     std::vector<std::pair<sf::Vector2f, AssetType>> tiles;
     if (isDefault) {
@@ -108,8 +156,12 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevel(sf::RenderWindow& wind
             tiles = loadLevelFromFile(outPath, platforms, textures);
         }
     }
-    window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
+    window.create(sf::VideoMode(1920, 1080), "veX", sf::Style::Default);
+    #ifdef __APPLE__
+    disableMouse(window);
+    #else
     disableMouse();
+    #endif
     return tiles;
 }
 
@@ -148,9 +200,169 @@ void enableMouse() {
     XCloseDisplay(display);
 }
 
-// Main function
+class ButtonInteraction {
+public:
+    ButtonInteraction() : showingText(false), promptVisible(true), displayDuration(5), timerStart(std::chrono::steady_clock::now()) {
+        if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
+            std::cerr << "Failed to load font\n";
+        }
+        text.setFont(font);
+        text.setCharacterSize(24);
+        text.setFillColor(sf::Color::White);
+    }
+
+    void handleInteraction(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, sf::RenderWindow& window, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned) {
+        bool nearButton = false;
+
+        for (const auto& tile : tilePositions) {
+            if (tile.second == AssetType::Button && distance(playerPos, tile.first) < 100.0f) {
+                nearButton = true;
+                if (promptVisible) {
+                    text.setString("Press F to prompt the sentinel...");
+                    text.setPosition(playerPos.x, playerPos.y - 50);
+                }
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !enemySpawned) {
+                    timerStart = std::chrono::steady_clock::now();
+                    showingText = true;
+                    promptVisible = false;
+                    enemyTriggered = true;
+                    enemyDescending = true;
+                    enemySpawned = true;
+                    text.setString("");
+                }
+            }
+        }
+
+        if (showingText) {
+            auto now = std::chrono::steady_clock::now();
+            float elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - timerStart).count();
+            if (elapsed >= displayDuration) {
+                showingText = false;
+            }
+        }
+
+        if ((nearButton && promptVisible) || showingText) {
+            window.draw(text);
+        }
+    }
+
+    void resetPrompt() {
+        promptVisible = true;
+    }
+
+private:
+    sf::Font font;
+    sf::Text text;
+    bool showingText;
+    bool promptVisible;
+    int displayDuration;
+    std::chrono::steady_clock::time_point timerStart;
+
+    float distance(const sf::Vector2f& a, const sf::Vector2f& b) {
+        return std::sqrt((a.x - b.x) * (a.x - b.y));
+    }
+};
+
+class SentinelInteraction {
+public:
+    SentinelInteraction() 
+        : questionVisible(false), ascent(false), awaitingResponse(false), responseComplete(false), 
+          enemyGone(false), rng(rd()), dist(0, 1) {
+        
+        if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
+            std::cerr << "Failed to load font\n";
+        }
+
+        playerOptions.setFont(font);
+        playerOptions.setCharacterSize(24);
+        playerOptions.setFillColor(sf::Color::White);
+    }
+
+    void triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned, 
+                            std::unique_ptr<Enemy>& enemy, float deltaTime, const sf::Vector2f& playerPos, ButtonInteraction buttonInteraction) {
+        if (enemyGone) return;
+
+        if (!enemyTriggered) return;
+
+        sf::FloatRect enemyBounds = enemy->getGlobalBounds();
+        float targetYPosition = 600.0f;
+
+        if (enemyBounds.top < targetYPosition && !ascent) {
+            enemy->setPosition(enemyBounds.left, enemyBounds.top + 500.0f * deltaTime);
+        } else if (!ascent && !responseComplete) {
+            enemyDescending = false;
+            questionVisible = true;
+            text.setString("What do you seek by summoning me?");
+            text.setPosition(1400, 500);
+
+            playerOptions.setString("Q: Nothing, go away \n T: Will your next response be a lie?");
+            playerOptions.setPosition(playerPos.x, playerPos.y - 50);
+
+            awaitingResponse = true;
+        }
+
+        if (questionVisible && awaitingResponse) {
+            handleInput(text, enemyTriggered, enemySpawned, buttonInteraction);
+        }
+
+        if (ascent) {
+            if (enemyBounds.top > -500.0f) {
+                ascent = true;
+                enemy->setPosition(enemyBounds.left, enemyBounds.top - 500.0f * deltaTime);
+            } else {
+                ascent = false;
+                enemySpawned = false;
+                questionVisible = false;
+                responseComplete = false;
+                enemyGone = true;
+                buttonInteraction.resetPrompt();
+            }
+        }
+
+        if (awaitingResponse) {
+            window.draw(playerOptions);
+        }
+    }
+
+private:
+    sf::Font font;
+    sf::Text playerOptions;
+    bool questionVisible;
+    bool ascent;
+    bool awaitingResponse;
+    bool responseComplete;
+    bool enemyGone;
+    std::random_device rd;
+    std::mt19937 rng;
+    std::uniform_int_distribution<int> dist;
+
+    void handleInput(sf::Text& text, bool& enemyTriggered, bool& enemySpawned, ButtonInteraction& buttonInteraction) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
+            questionVisible = false;
+            ascent = true;
+            awaitingResponse = false;
+            responseComplete = true;
+            text.setString("");
+
+            enemyTriggered = false;
+            enemySpawned = true;
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !responseComplete) {
+            int response = dist(rng);
+            if (response == 0) {
+                text.setString("I am an honest sentinel.");
+            } else {
+                text.setString("I am a dishonest sentinel.");
+            }
+            questionVisible = false;
+            awaitingResponse = false;
+            responseComplete = true;
+        }
+    }
+};
+
 int main() {
-    sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
+    sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Default);
     window.setFramerateLimit(60);
 
     sf::Font font;
@@ -231,11 +443,19 @@ int main() {
             }
 
             if (gameState == GameState::Title) {
+                #ifdef __APPLE__
+                enableMouse(window);
+                #else
                 enableMouse();
+                #endif
                 titleScreen.handleInput();
                 if (titleScreen.currentSelection == 0 && (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
                     gameState = GameState::Play;
+                    #ifdef __APPLE__
+                    disableMouse(window);
+                    #else
                     disableMouse();
+                    #endif
                 } else if (titleScreen.currentSelection == 2 && (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || sf::Mouse::isButtonPressed(sf::Mouse::Left))) {
                     gameState = GameState::Exit;
                     window.close();
@@ -246,6 +466,19 @@ int main() {
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::E) {
                     currentMode = (currentMode == GameMode::Play) ? GameMode::Edit : GameMode::Play;
                     currentMode == GameMode::Edit ? enableMouse() : disableMouse();
+                    if (currentMode == GameMode::Edit) {
+                        #ifdef __APPLE__
+                        enableMouse(window);
+                        #else
+                        enableMouse();
+                        #endif
+                    } else {
+                        #ifdef __APPLE__
+                        disableMouse(window);
+                        #else
+                        disableMouse();
+                        #endif
+                    }
                 }
 
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::D && currentMode == GameMode::Edit) {
