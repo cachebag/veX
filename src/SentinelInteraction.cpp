@@ -31,9 +31,9 @@ void SentinelInteraction::resetState() {
 
 void SentinelInteraction::startLevel2Interaction() {
     // Initialize variables specific to level 2 interaction
-    questionVisible = true;
+    questionVisible = false;
     ascent = false;
-    awaitingResponse = true;
+    awaitingResponse = false;
     sentinelHasAnswered = false;
     responseComplete = false;
     awaitingFinalAnswer = false;
@@ -49,7 +49,7 @@ void SentinelInteraction::triggerInteraction(sf::RenderWindow& window, sf::Text&
     if (currentLevel == 1) {
         triggerInteractionLevel1(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, playerPos, buttonInteraction, proceedToNextLevel);
     } else if (currentLevel == 2) {
-        triggerInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, playerPos, proceedToNextLevel);
+        triggerInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, playerPos, buttonInteraction, proceedToNextLevel);
     }
 }
 
@@ -66,7 +66,7 @@ void SentinelInteraction::triggerInteractionLevel1(sf::RenderWindow& window, sf:
     }
 
     if (ascent) {
-        handleAscentAndCleanup(enemy, text, enemyTriggered, enemySpawned, buttonInteraction, deltaTime);
+        handleAscentAndCleanup(enemy, text, enemyTriggered, enemySpawned, buttonInteraction,  deltaTime);
         return;
     }
 
@@ -85,18 +85,26 @@ void SentinelInteraction::triggerInteractionLevel1(sf::RenderWindow& window, sf:
 
 void SentinelInteraction::triggerInteractionLevel2(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                                                    bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
-                                                   const sf::Vector2f& playerPos, bool& proceedToNextLevel) {
-    if (!enemyTriggered) return;  // Early exit if enemy is not triggered
+                                                   const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
+    (void)enemySpawned;
+    if (!enemyTriggered) {
+        text.setString("");
+        return;
+  } 
 
-    enemy->flipSprite();  // Flip sprite at the start of the interaction
+    if (ascent) {
+        handleAscentAndCleanupLevel2(enemy, text, enemyTriggered, buttonInteraction, deltaTime);
+        return;
+    }
+
+    enemy->flipSprite();  
     
     if (resetSentinelInteraction) {
         resetState();
         resetSentinelInteraction = false;
     }
 
-    if (ascent) {
-        handleAscentAndCleanupLevel2(enemy, text, enemyTriggered, deltaTime);
+    if (enemy->getPosition().y < 200.0f) {
         return;
     }
 
@@ -110,7 +118,7 @@ void SentinelInteraction::triggerInteractionLevel2(sf::RenderWindow& window, sf:
         return;
     }
 
-    handleInitialInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemy, deltaTime, playerPos, proceedToNextLevel);
+    handleInitialInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemy, deltaTime, playerPos, buttonInteraction, proceedToNextLevel);
 }
 
 
@@ -151,23 +159,42 @@ void SentinelInteraction::handleInitialInteraction(sf::RenderWindow& window, sf:
 
 void SentinelInteraction::handleInitialInteractionLevel2(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                                                          std::unique_ptr<Enemy>& enemy, float deltaTime,
-                                                         const sf::Vector2f& playerPos, bool& proceedToNextLevel) {
+                                                         const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
     (void)enemyDescending;
-    (void)enemy;
     (void)deltaTime;
+
+    if (!enemyTriggered) {
+        text.setString("");
+        return;
+    }
+
+    // Make sure enemy is at correct position before continuing
+    if (enemy->getPosition().y < 200.0f) {
+        return;
+    }
+
+    // Handle message display duration
+    if (messageDisplayTimer.getElapsedTime() < messageDisplayDuration && 
+        messageDisplayTimer.getElapsedTime().asSeconds() != 0) {
+        return;
+    }
+
     if (!sentinelHasAnswered) {
-        text.setString("Sentinel: Welcome to level 2. Solve this puzzle.");
-        text.setPosition(200, 200); // Adjust position as needed
-        playerOptions.setString("Q: Answer A \nT: Answer B");
+        questionVisible = true;
+        text.setString("Unidentified Person -- Who are you and what is it you seek?");
+        text.setPosition(200, 250);
+        playerOptions.setString("Q: Nothing  \nT: Did the last Sentinel lie to me?");
         playerOptions.setPosition(playerPos.x, playerPos.y - 50);
         awaitingResponse = true;
     } else if (!responseComplete) {
         text.setString("Was the sentinel telling the truth? (Y/N)");
-
+        
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Y)) {
-            checkAnswerLevel2(true, text, enemyTriggered, proceedToNextLevel);
+            checkAnswerLevel2(true, text, enemyTriggered, buttonInteraction, proceedToNextLevel);
+            messageDisplayTimer.restart();
         } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N)) {
-            checkAnswerLevel2(false, text, enemyTriggered, proceedToNextLevel);
+            checkAnswerLevel2(false, text, enemyTriggered, buttonInteraction, proceedToNextLevel);
+            messageDisplayTimer.restart();
         }
     }
 
@@ -185,7 +212,8 @@ void SentinelInteraction::handleQuestionResponse(sf::Text& text) {
         text.setString("");
     } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !sentinelHasAnswered) {
         sentinelTruth = dist(rng) == 1;
-        if (sentinelTruth) {
+        
+        if (dist(rng) == 1) {
             text.setString("No, I am an honest sentinel.");
         } else {
             text.setString("It will.");
@@ -197,22 +225,18 @@ void SentinelInteraction::handleQuestionResponse(sf::Text& text) {
 }
 
 void SentinelInteraction::handleQuestionResponseLevel2(sf::Text& text) {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
-        sentinelTruth = dist(rng) == 1;
-        if (sentinelTruth) {
-            text.setString("That is correct.");
-        } else {
-            text.setString("That is incorrect.");
-        }
-        messageDisplayTimer.restart();
-        sentinelHasAnswered = true;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q) && !sentinelHasAnswered) {
+        questionVisible = false;
+        ascent = true;
         awaitingResponse = false;
+        text.setString("");
+        // Reset button interaction state when Q is pressed
+        resetSentinelInteraction = true;
     } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !sentinelHasAnswered) {
-        sentinelTruth = dist(rng) == 1;
-        if (sentinelTruth) {
-            text.setString("Indeed.");
+        if (dist(rng) == 1) {
+            text.setString("Yes, the last sentinel lied to you.");
         } else {
-            text.setString("Not quite.");
+            text.setString("No, the last sentinel was truthful.");
         }
         messageDisplayTimer.restart();
         sentinelHasAnswered = true;
@@ -221,14 +245,18 @@ void SentinelInteraction::handleQuestionResponseLevel2(sf::Text& text) {
 }
 
 void SentinelInteraction::checkAnswer(bool playerAnswer, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
-    if (playerAnswer == sentinelTruth) {
-        text.setString("Correct! You may proceed.");
+    // Randomly determine if the player's answer is correct, regardless of their actual choice
+    (void)playerAnswer;
+    bool randomOutcome = dist(rng) == 1;
+    
+    if (randomOutcome) {
+        text.setString("Correct. You may proceed.");
         ascent = true;
         isCorrect = true;
         proceedToNextLevel = true;
         messageDisplayTimer.restart();
     } else {
-        text.setString("Incorrect. Press F near the button to try again.");
+        text.setString("Incorrect. Try again...");
         responseComplete = true;
         sentinelHasAnswered = false;
         messageDisplayTimer.restart();
@@ -237,21 +265,24 @@ void SentinelInteraction::checkAnswer(bool playerAnswer, sf::Text& text, bool& e
     }
 }
 
-void SentinelInteraction::checkAnswerLevel2(bool playerAnswer, sf::Text& text, bool& enemyTriggered, bool& proceedToNextLevel) {
-    if (playerAnswer == sentinelTruth) {
-        text.setString("Correct! You may proceed.");
+
+void SentinelInteraction::checkAnswerLevel2(bool playerAnswer, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
+    bool randomOutcome = dist(rng) == 1;
+    
+    if (randomOutcome) {
+        text.setString("Correct. You may proceed.");
         ascent = true;
         isCorrect = true;
         proceedToNextLevel = true;
-        messageDisplayTimer.restart();
     } else {
         text.setString("Incorrect. Try again.");
-        responseComplete = true;
-        sentinelHasAnswered = false;
-        messageDisplayTimer.restart();
         enemyTriggered = false;
+        buttonInteraction.resetPrompt();
+        resetSentinelInteraction = true;
+        // Don't set responseComplete here - wait for message timer
     }
 }
+
 
 void SentinelInteraction::handleAscentAndCleanup(std::unique_ptr<Enemy>& enemy, sf::Text& text, bool& enemyTriggered,
                                                  bool& enemySpawned, ButtonInteraction& buttonInteraction, float deltaTime) {
@@ -267,11 +298,12 @@ void SentinelInteraction::handleAscentAndCleanup(std::unique_ptr<Enemy>& enemy, 
             text.setString("");
             buttonInteraction.resetPrompt();
             ascent = false;
+            enemy->flipSprite();
         }
     }
 }
 
-void SentinelInteraction::handleAscentAndCleanupLevel2(std::unique_ptr<Enemy>& enemy, sf::Text& text, bool& enemyTriggered, float deltaTime) {
+void SentinelInteraction::handleAscentAndCleanupLevel2(std::unique_ptr<Enemy>& enemy, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction, float deltaTime) {
     if (ascent) {
         float ascentSpeed = 500.0f;
         enemy->setPosition(enemy->getPosition().x, enemy->getPosition().y - ascentSpeed * deltaTime);
@@ -281,11 +313,12 @@ void SentinelInteraction::handleAscentAndCleanupLevel2(std::unique_ptr<Enemy>& e
             resetState();
             enemyTriggered = false;
             text.setString("");
+            buttonInteraction.resetPrompt();
             ascent = false;
+            resetSentinelInteraction = true;  // Make sure button can be pressed again
         }
     }
 }
-
 bool SentinelInteraction::isAscending() const {
     return ascent;
 }

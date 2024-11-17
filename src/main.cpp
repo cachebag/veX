@@ -176,33 +176,31 @@ int main() {
     bool debugMode = false;
     const float gridSize = 64.0f;
     std::vector<Platform> platforms;
-    std::map<AssetType, sf::Texture> level1Textures;
-    std::map<AssetType, sf::Texture> level2Textures;
+    
     bool playerJustReset = false;
 
     AssetType currentAsset = AssetType::Brick;
 
     // Load textures for level 1
-    if (!level1Textures[AssetType::Brick].loadFromFile("assets/tutorial_level/left_grass.png") ||
-        !level1Textures[AssetType::Dripstone].loadFromFile("assets/tutorial_level/dripstone.png") ||
-        !level1Textures[AssetType::LeftRock].loadFromFile("assets/tutorial_level/left_rock.png") ||
-        !level1Textures[AssetType::RightRock].loadFromFile("assets/tutorial_level/right_rock.png") ||
-        !level1Textures[AssetType::Tree].loadFromFile("assets/tutorial_level/tree.png") ||
-        !level1Textures[AssetType::Grassy].loadFromFile("assets/tutorial_level/grassy.png") ||
-        !level1Textures[AssetType::Button].loadFromFile("assets/tutorial_level/button.png")) {
+    
+    std::map<AssetType, sf::Texture> textureMap;
+    // Load all textures
+    if (!textureMap[AssetType::Brick].loadFromFile("assets/tutorial_level/left_grass.png") ||
+        !textureMap[AssetType::Dripstone].loadFromFile("assets/tutorial_level/dripstone.png") ||
+        !textureMap[AssetType::LeftRock].loadFromFile("assets/tutorial_level/left_rock.png") ||
+        !textureMap[AssetType::RightRock].loadFromFile("assets/tutorial_level/right_rock.png") ||
+        !textureMap[AssetType::Tree].loadFromFile("assets/tutorial_level/tree.png") ||
+        !textureMap[AssetType::Grassy].loadFromFile("assets/tutorial_level/grassy.png") ||
+        !textureMap[AssetType::Button].loadFromFile("assets/tutorial_level/button.png") ||
+        // Level 2 textures
+        !textureMap[AssetType::Stair1].loadFromFile("assets/level2/stair1.png") ||
+        !textureMap[AssetType::Stair2].loadFromFile("assets/level2/stair2.png") ||
+        !textureMap[AssetType::RightStair1].loadFromFile("assets/level2/rightstair1.png") ||
+        !textureMap[AssetType::RightStair2].loadFromFile("assets/level2/rightstair2.png") ||
+        !textureMap[AssetType::Ground].loadFromFile("assets/level2/floor.png")) {
+        std::cerr << "Failed to load textures" << std::endl;
         return -1;
     }
-
-    // Load textures for level 2
-    if (!level2Textures[AssetType::Stair1].loadFromFile("assets/level2/stair1.png") ||
-        !level2Textures[AssetType::Stair2].loadFromFile("assets/level2/stair2.png") ||
-        !level2Textures[AssetType::RightStair1].loadFromFile("assets/level2/rightstair1.png") ||
-        !level2Textures[AssetType::RightStair2].loadFromFile("assets/level2/rightstair2.png") ||
-        !level2Textures[AssetType::Ground].loadFromFile("assets/level2/floor.png")) {
-        return -1;
-    }
-
-    std::map<AssetType, sf::Texture>* activeTextures = &level1Textures;
 
     Background background("assets/tutorial_level/background.png",
                           "assets/tutorial_level/middleground.png",
@@ -211,7 +209,7 @@ int main() {
                                    "assets/level2/middleground.png",
                                    "assets/level2/foreground.png", sf::Vector2u(1920, 1080));
 
-    std::vector<std::pair<sf::Vector2f, AssetType>> tilePositions = loadLevel(window, platforms, *activeTextures, true);
+    std::vector<std::pair<sf::Vector2f, AssetType>> tilePositions = loadLevel(window, platforms, textureMap, true);
 
     ButtonInteraction buttonInteraction;
     SentinelInteraction sentinelInteraction;
@@ -257,7 +255,7 @@ int main() {
                 }
 
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::L) {
-                    tilePositions = loadLevel(window, platforms, *activeTextures, false);
+                    tilePositions = loadLevel(window, platforms, textureMap, false);
                 }
 
                 // Asset selection in edit mode, based on the current level
@@ -272,6 +270,7 @@ int main() {
                     if (event.key.code == sf::Keyboard::Num2) currentAsset = AssetType::Stair2;
                     if (event.key.code == sf::Keyboard::Num3) currentAsset = AssetType::RightStair1;
                     if (event.key.code == sf::Keyboard::Num4) currentAsset = AssetType::RightStair2;
+                    if (event.key.code == sf::Keyboard::Num5) currentAsset = AssetType::Button;  // Add this line
                     if (event.key.code == sf::Keyboard::Num6) currentAsset = AssetType::Ground;
                 }
             }
@@ -286,7 +285,7 @@ int main() {
                     if (std::find_if(tilePositions.begin(), tilePositions.end(),
                                      [&](const std::pair<sf::Vector2f, AssetType>& tile) { return tile.first == tilePos; }) == tilePositions.end()) {
                         tilePositions.emplace_back(tilePos, currentAsset);
-                        sf::Texture tileTexture = (*activeTextures)[currentAsset];
+                        sf::Texture tileTexture = (textureMap)[currentAsset];
                         sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
 
                         if (currentAsset == AssetType::Grassy || currentAsset == AssetType::Ground) {
@@ -297,17 +296,22 @@ int main() {
                     }
                 }
 
-                if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
-                    auto it = std::find_if(tilePositions.begin(), tilePositions.end(),
-                                           [&](const std::pair<sf::Vector2f, AssetType>& tile) { return tile.first == tilePos; });
-                    if (it != tilePositions.end()) {
-                        int index = std::distance(tilePositions.begin(), it);
-                        tilePositions.erase(it);
-                        if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button) {
-                            platforms.erase(platforms.begin() + index);
-                        }
-                    }
-                }
+if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+    if (std::find_if(tilePositions.begin(), tilePositions.end(),
+                     [&](const std::pair<sf::Vector2f, AssetType>& tile) { 
+                         return tile.first == tilePos; 
+                     }) == tilePositions.end()) {
+        tilePositions.emplace_back(tilePos, currentAsset);
+        sf::Texture tileTexture = (textureMap)[currentAsset];
+        sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
+
+        if (currentAsset == AssetType::Grassy || currentAsset == AssetType::Ground) {
+            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, true);
+        } else if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button) {
+            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, false);
+        }
+    }
+}
             }
         }
 
@@ -340,8 +344,8 @@ int main() {
             }
 
             for (const auto& tileData : tilePositions) {
-                auto it = activeTextures->find(tileData.second);
-                if (it != activeTextures->end()) {
+                auto it = textureMap.find(tileData.second);
+                if (it != textureMap.end()) {
                     sf::Sprite tile(it->second);
                     tile.setPosition(tileData.first);
                     window.draw(tile);
@@ -355,7 +359,7 @@ int main() {
                 window.draw(text);
             } else if (currentLevel == 2) {
                 if (enemyTriggered) {
-                    sentinelInteraction.triggerInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, player->getPosition(), proceedToNextLevel);
+                    sentinelInteraction.triggerInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, player->getPosition(), buttonInteraction, proceedToNextLevel);
                     window.draw(text);
                 }
             }
@@ -374,6 +378,20 @@ int main() {
                 if (currentLevel == 1) {
                     buttonInteraction.handleInteraction(player->getPosition(), tilePositions, window, enemyTriggered, enemyDescending, enemySpawned);
                 }
+                
+                if (currentLevel == 2) {
+                    if (enemyTriggered) {
+                        sentinelInteraction.triggerInteractionLevel2(window, text, enemyTriggered, 
+                                                                    enemyDescending, enemySpawned, 
+                                                                    enemy, deltaTime, player->getPosition(), buttonInteraction, 
+                                                                    proceedToNextLevel);
+                        window.draw(text);
+                    }
+                    // Add this line to handle button interaction in level 2
+                    buttonInteraction.handleInteractionLevel2(player->getPosition(), tilePositions, 
+                                                              window, enemyTriggered, enemyDescending, 
+                                                              sentinelDescendLevel2);
+}
             }
 
             if (currentMode == GameMode::Edit && debugMode) {
@@ -386,8 +404,7 @@ int main() {
                 tilePositions.clear();
                 platforms.clear();
                 
-                activeTextures = &level2Textures; // Switch to level 2 textures
-                tilePositions = loadLevelFromFile("levels/level2.txt", platforms, *activeTextures);
+                tilePositions = loadLevelFromFile("levels/level2.txt", platforms, textureMap);
 
                 enemy->setPosition(100, -500);
                 player->setPosition(0, 850);
@@ -396,9 +413,10 @@ int main() {
                 enemyTriggered = false;
                 enemySpawned = false;
                 sentinelInteraction.resetState();
+                text.setString("");
                 buttonInteraction.resetPrompt();
                 playerJustReset = true;
-                sentinelDescendLevel2 = true;
+                sentinelDescendLevel2 = false;
             }
 
             window.display();
@@ -407,4 +425,3 @@ int main() {
 
     return 0;
 }
-

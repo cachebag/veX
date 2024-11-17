@@ -61,6 +61,50 @@ void ButtonInteraction::handleInteraction(const sf::Vector2f& playerPos,
     }
 }
 
+void ButtonInteraction::handleInteractionLevel2(const sf::Vector2f& playerPos, 
+                                              const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions,
+                                              sf::RenderWindow& window, bool& enemyTriggered, 
+                                              bool& enemyDescending, bool& sentinelDescendLevel2) {
+    bool nearButton = false;
+
+    for (const auto& tile : tilePositions) {
+        if (tile.second == AssetType::Button) {
+            sf::Vector2f buttonPos = tile.first;
+            if (distance(playerPos, buttonPos) < 100.0f) {
+                nearButton = true;
+                if (promptVisible && !interactionInProgress) {
+                    text.setString("Press F to prompt the sentinel...");
+                    text.setPosition(buttonPos.x - 50, buttonPos.y - 50);
+                }
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !interactionInProgress) {
+                    timerStart = std::chrono::steady_clock::now();
+                    showingText = true;
+                    promptVisible = false;
+                    enemyTriggered = true;
+                    enemyDescending = true;
+                    sentinelDescendLevel2 = true;
+                    interactionInProgress = true;
+                    text.setString("");
+
+                    resetSentinelInteraction = true;
+                }
+            }
+        }
+    }
+
+    if (showingText) {
+        auto now = std::chrono::steady_clock::now();
+        float elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - timerStart).count();
+        if (elapsed >= displayDuration) {
+            showingText = false;
+        }
+    }
+
+    if ((nearButton && promptVisible) || showingText) {
+        window.draw(text);
+    }
+}
 void ButtonInteraction::resetPrompt() {
     promptVisible = true;
     interactionInProgress = false;

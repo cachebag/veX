@@ -16,6 +16,9 @@ public:
     ButtonInteraction();
     void handleInteraction(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions,
                            sf::RenderWindow& window, bool& enemyTriggered, bool& enemyDescending, bool& enemySpawned);
+
+    void handleInteractionLevel2(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, 
+                           sf::RenderWindow& window, bool& enemyTriggered, bool& enemyDescending, bool& sentinelDescendLevel2);
     void resetPrompt();
 
 private:
