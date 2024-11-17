@@ -56,8 +56,6 @@ void SentinelInteraction::triggerInteraction(sf::RenderWindow& window, sf::Text&
 void SentinelInteraction::triggerInteractionLevel1(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                                                    bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
                                                    const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
-    // Original level 1 interaction code
-    // (Same as in your original code)
     if (!enemyTriggered) return;
 
     if (resetSentinelInteraction) {
@@ -181,7 +179,7 @@ void SentinelInteraction::handleInitialInteractionLevel2(sf::RenderWindow& windo
 
     if (!sentinelHasAnswered) {
         questionVisible = true;
-        text.setString("Unidentified Person -- Who are you and what is it you seek?");
+        text.setString("Who are you and what is it you seek?");
         text.setPosition(200, 250);
         playerOptions.setString("Q: Nothing  \nT: Did the last Sentinel lie to me?");
         playerOptions.setPosition(playerPos.x, playerPos.y - 50);
@@ -276,10 +274,9 @@ void SentinelInteraction::checkAnswerLevel2(bool playerAnswer, sf::Text& text, b
         proceedToNextLevel = true;
     } else {
         text.setString("Incorrect. Try again.");
-        enemyTriggered = false;
+        //enemyTriggered = false;
         buttonInteraction.resetPrompt();
         resetSentinelInteraction = true;
-        // Don't set responseComplete here - wait for message timer
     }
 }
 
