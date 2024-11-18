@@ -1,6 +1,7 @@
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
 #include "../include/Enemy.hpp"
+#include "../include/SentinelInteraction.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -115,7 +116,11 @@ int Player::getOrbCount() const {
 }
 
 void Player::handleInput(float deltaTime) {
-    if (isDead) return;  // Don't handle input while dead
+    if (isDead) return; 
+
+    if (sentinelInteraction && sentinelInteraction->isInBossFight() && !sentinelInteraction->canMove()) {
+        return;
+    }
 
     float velocityX = 0.0f;
     bool isMoving = false;
@@ -233,6 +238,10 @@ void Player::boundDetection(int windowWidth, int windowHeight) {
 
 void Player::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy) {
     if (isDead) return;  // Don't move while dead
+  
+    if (sentinelInteraction && sentinelInteraction->isInBossFight() && !sentinelInteraction->canMove()) {
+        return;
+    }
 
     y += yVelocity * deltaTime;
 

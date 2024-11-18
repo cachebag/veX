@@ -27,7 +27,7 @@ void enableMouse();
 void disableMouse();
 
 enum class GameMode { Play, Edit };
-enum class GameState { Title, Play, Exit };
+enum class GameState { Title, Play, Victory, Exit };
 
 bool isValidAssetType(int assetTypeInt) {
     return assetTypeInt >= static_cast<int>(AssetType::Brick) &&
@@ -208,6 +208,9 @@ int main() {
 
     ButtonInteraction buttonInteraction;
     SentinelInteraction sentinelInteraction(window, view, player, enemy);
+    sentinelInteraction.setCurrentPlatforms(platforms);
+
+    player->setSentinelInteraction(&sentinelInteraction);
 
     bool enemyTriggered = false;
     bool enemyDescending = false;
@@ -360,7 +363,45 @@ int main() {
                         enemyTriggered = true;
                         sentinelInteraction.startLevel2Interaction();
                     }
-                }
+                } else if (gameState == GameState::Victory) {
+    window.clear();
+    
+    // Update and draw the victory screen
+    sentinelInteraction.updateVictoryScreen(deltaTime);
+    sentinelInteraction.drawVictoryScreen(window);
+    
+    // Handle victory screen input
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || 
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Space) || 
+        sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+        // Return to title screen
+        gameState = GameState::Title;
+        
+        // Reset game state
+        currentLevel = 1;
+        proceedToNextLevel = false;
+        enemyTriggered = false;
+        enemySpawned = false;
+        sentinelInteraction.resetState();
+        
+        // Reset player and enemy positions
+        player->setPosition(0, 850);
+        player->setSpawnPoint(sf::Vector2f(0, 850));
+        player->resetState();
+        player->resetHealth();
+        enemy->setPosition(1600, -500);
+        
+        // Load initial level
+        tilePositions = loadLevelFromFile("levels/level1.txt", platforms, textureMap);
+        
+        // Update view and other necessary resets
+        updateView(window, view);
+        text.setString("");
+        buttonInteraction.resetPrompt();
+    }
+    
+    window.display();
+}
             } else if (currentLevel == 3) {
                 level3Background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
     
@@ -393,6 +434,8 @@ int main() {
                 // Update boss fight logic
                         sentinelInteraction.updateBossFight(deltaTime, enemy, player->getPosition());
                         sentinelInteraction.checkGemCollision(player->getPosition());
+
+                    
             
                         // Check orb collisions with player
                         if (!player->isInvulnerable() && !player->isPlayerDead()) {
@@ -453,6 +496,11 @@ int main() {
                 // Draw boss fight UI elements on top if in level 3 boss fight
                 if (currentLevel == 3 && sentinelInteraction.isInBossFight()) {
                     sentinelInteraction.drawBossFightElements(window);
+
+                    if (sentinelInteraction.isVictorious()) {
+                        gameState = GameState::Victory;
+                        enableMouse(); // Allow mouse for victory screen interaction
+                      }
                 }
 
                 if (currentLevel == 1) {
@@ -501,6 +549,7 @@ int main() {
                     platforms.clear();
 
                     tilePositions = loadLevelFromFile("levels/level3.txt", platforms, textureMap);
+                    sentinelInteraction.setCurrentPlatforms(platforms);
 
                     enemy->setPosition(960, -500);
                     enemy->flipSprite();

@@ -3,6 +3,9 @@
 #include <vector>
 #include "Platform.hpp"
 #include "Enemy.hpp"
+#include "SentinelInteraction.hpp"
+
+class SentinelInteraction;
 
 class Player {
 public:
@@ -36,6 +39,10 @@ public:
     bool isInvulnerable() const;
     void resetHealth();
     int getHealth() const { return currentHealth; }
+
+    void setSentinelInteraction(SentinelInteraction* sentinel) {
+        sentinelInteraction = sentinel;
+    }
 
 private:
     // Position and movement variables
@@ -95,6 +102,8 @@ private:
 
     // UI methods
     void drawHealthUI(sf::RenderWindow& window) const;
+
+    SentinelInteraction* sentinelInteraction{nullptr};
 };
 
 // Static constant definitions
