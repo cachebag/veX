@@ -16,6 +16,7 @@ public:
     SentinelInteraction();
     void resetState();
     void startLevel2Interaction();
+    void startLevel3Interaction();
     void triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                             bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
                             const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel);
@@ -28,7 +29,10 @@ public:
     void triggerInteractionLevel2(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                                   bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
                                   const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel);
-
+    void triggerInteractionLevel3(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, 
+                                  bool& enemyDescending, bool& enemySpawned, std::unique_ptr<Enemy>& enemy,
+                                  float deltaTime, const sf::Vector2f& playerPos, 
+                                  ButtonInteraction& buttonInteraction, bool& proceedToNextLevel);
 private:
     // Member variables
     sf::Font font;
@@ -64,6 +68,20 @@ private:
     void handleQuestionResponseLevel2(sf::Text& text);
     void checkAnswerLevel2(bool playerAnswer, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel);
     void handleAscentAndCleanupLevel2(std::unique_ptr<Enemy>& enemy, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction, float deltaTime);
+
+    void handleInitialInteractionLevel3(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered,
+                                   bool& enemyDescending, std::unique_ptr<Enemy>& enemy, float deltaTime,
+                                   const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction,
+                                   bool& proceedToNextLevel);
+
+    void handleQuestionResponseLevel3(sf::Text& text);
+
+    void checkAnswerLevel3(bool playerAnswer, sf::Text& text, bool& enemyTriggered,
+                      ButtonInteraction& buttonInteraction, bool& proceedToNextLevel);
+
+    void handleAscentAndCleanupLevel3(std::unique_ptr<Enemy>& enemy, sf::Text& text,
+                                 bool& enemyTriggered, ButtonInteraction& buttonInteraction,
+                                 float deltaTime);
 };
 
 #endif // SENTINEL_INTERACTION_HPP

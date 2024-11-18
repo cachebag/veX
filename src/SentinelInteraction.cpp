@@ -43,6 +43,17 @@ void SentinelInteraction::startLevel2Interaction() {
     // Set up any level 2 specific dialogue or questions
 }
 
+void SentinelInteraction::startLevel3Interaction() {
+    questionVisible = false;
+    ascent = false;
+    awaitingResponse = false;
+    sentinelHasAnswered = false;
+    responseComplete = false;
+    awaitingFinalAnswer = false;
+    isCorrect = false;
+    currentLevel = 3;
+}
+
 void SentinelInteraction::triggerInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                                              bool& enemySpawned, std::unique_ptr<Enemy>& enemy, float deltaTime,
                                              const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
@@ -50,6 +61,8 @@ void SentinelInteraction::triggerInteraction(sf::RenderWindow& window, sf::Text&
         triggerInteractionLevel1(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, playerPos, buttonInteraction, proceedToNextLevel);
     } else if (currentLevel == 2) {
         triggerInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, playerPos, buttonInteraction, proceedToNextLevel);
+    } else if (currentLevel == 3) {
+        triggerInteractionLevel3(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, playerPos, buttonInteraction, proceedToNextLevel);
     }
 }
 
@@ -120,6 +133,53 @@ void SentinelInteraction::triggerInteractionLevel2(sf::RenderWindow& window, sf:
 }
 
 
+void SentinelInteraction::triggerInteractionLevel3(sf::RenderWindow& window, sf::Text& text, 
+                                                  bool& enemyTriggered, bool& enemyDescending,
+                                                  bool& enemySpawned, std::unique_ptr<Enemy>& enemy,
+                                                  float deltaTime, const sf::Vector2f& playerPos,
+                                                  ButtonInteraction& buttonInteraction,
+                                                  bool& proceedToNextLevel) {
+
+    (void)enemySpawned;
+
+    if (!enemyTriggered) {
+        text.setString("");
+        return;
+    }
+
+    if (ascent) {
+        handleAscentAndCleanupLevel3(enemy, text, enemyTriggered, buttonInteraction, deltaTime);
+        return;
+    }
+
+    enemy->flipSprite();
+
+    if (resetSentinelInteraction) {
+        resetState();
+        resetSentinelInteraction = false;
+    }
+
+    if (enemy->getPosition().y < 200.0f) {
+        return;
+    }
+
+    if (messageDisplayTimer.getElapsedTime() < messageDisplayDuration && 
+        messageDisplayTimer.getElapsedTime().asSeconds() != 0) {
+        return;
+    }
+
+    if (isCorrect && messageDisplayTimer.getElapsedTime() >= messageDisplayDuration) {
+        text.setString("");
+        proceedToNextLevel = true;
+        return;
+    }
+
+    handleInitialInteractionLevel3(window, text, enemyTriggered, enemyDescending,
+                                 enemy, deltaTime, playerPos, buttonInteraction,
+                                 proceedToNextLevel);
+}
+
+
 void SentinelInteraction::handleInitialInteraction(sf::RenderWindow& window, sf::Text& text, bool& enemyTriggered, bool& enemyDescending,
                                                    std::unique_ptr<Enemy>& enemy, float deltaTime,
                                                    const sf::Vector2f& playerPos, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
@@ -180,7 +240,7 @@ void SentinelInteraction::handleInitialInteractionLevel2(sf::RenderWindow& windo
     if (!sentinelHasAnswered) {
         questionVisible = true;
         text.setString("Who are you and what is it you seek?");
-        text.setPosition(200, 250);
+        text.setPosition(200, 150);
         playerOptions.setString("Q: Nothing  \nT: Did the last Sentinel lie to me?");
         playerOptions.setPosition(playerPos.x, playerPos.y - 50);
         awaitingResponse = true;
@@ -201,6 +261,50 @@ void SentinelInteraction::handleInitialInteractionLevel2(sf::RenderWindow& windo
         window.draw(playerOptions);
     }
 }
+
+
+void SentinelInteraction::handleInitialInteractionLevel3(sf::RenderWindow& window, sf::Text& text,
+                                                        bool& enemyTriggered, bool& enemyDescending,
+                                                        std::unique_ptr<Enemy>& enemy, float deltaTime,
+                                                        const sf::Vector2f& playerPos,
+                                                        ButtonInteraction& buttonInteraction,
+                                                        bool& proceedToNextLevel) {
+    (void)enemyDescending;
+    (void)deltaTime;
+    if (!enemyTriggered) {
+        text.setString("");
+        return;
+    }
+
+    if (enemy->getPosition().y < 200.0f) {
+        return;
+    }
+
+    if (!sentinelHasAnswered) {
+        questionVisible = true;
+        text.setString("You've made it far. But can you solve this final riddle?");
+        text.setPosition(200, 150);
+        playerOptions.setString("Q: I don't want to solve riddles\nT: Am I going to be attacked now? ");
+        playerOptions.setPosition(playerPos.x, playerPos.y - 50);
+        awaitingResponse = true;
+    } else if (!responseComplete) {
+        text.setString("Was the sentinel telling the truth? (Y/N)");
+        
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Y)) {
+            checkAnswerLevel3(true, text, enemyTriggered, buttonInteraction, proceedToNextLevel);
+            messageDisplayTimer.restart();
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N)) {
+            checkAnswerLevel3(false, text, enemyTriggered, buttonInteraction, proceedToNextLevel);
+            messageDisplayTimer.restart();
+        }
+    }
+
+    if (awaitingResponse && !sentinelHasAnswered) {
+        handleQuestionResponseLevel3(text);
+        window.draw(playerOptions);
+    }
+}
+
 
 void SentinelInteraction::handleQuestionResponse(sf::Text& text) {
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
@@ -242,6 +346,26 @@ void SentinelInteraction::handleQuestionResponseLevel2(sf::Text& text) {
     }
 }
 
+
+void SentinelInteraction::handleQuestionResponseLevel3(sf::Text& text) {
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q) && !sentinelHasAnswered) {
+        questionVisible = false;
+        ascent = true;
+        awaitingResponse = false;
+        text.setString("");
+        resetSentinelInteraction = true;
+    } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !sentinelHasAnswered) {
+        if (dist(rng) == 1) {
+            text.setString("I am...");
+        } else {
+            text.setString("You're free to go.");
+        }
+        messageDisplayTimer.restart();
+        sentinelHasAnswered = true;
+        awaitingResponse = false;
+    }
+}
+
 void SentinelInteraction::checkAnswer(bool playerAnswer, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
     // Randomly determine if the player's answer is correct, regardless of their actual choice
     (void)playerAnswer;
@@ -260,11 +384,15 @@ void SentinelInteraction::checkAnswer(bool playerAnswer, sf::Text& text, bool& e
         messageDisplayTimer.restart();
         buttonInteraction.resetPrompt();
         enemyTriggered = false;
-    }
+    }void handleAscentAndCleanupLevel3(std::unique_ptr<Enemy>& enemy, sf::Text& text,
+                                 bool& enemyTriggered, ButtonInteraction& buttonInteraction,
+                                 float deltaTime);
 }
 
 
 void SentinelInteraction::checkAnswerLevel2(bool playerAnswer, sf::Text& text, bool& enemyTriggered, ButtonInteraction& buttonInteraction, bool& proceedToNextLevel) {
+    (void)playerAnswer;
+    (void)enemyTriggered;
     bool randomOutcome = dist(rng) == 1;
     
     if (randomOutcome) {
@@ -280,6 +408,25 @@ void SentinelInteraction::checkAnswerLevel2(bool playerAnswer, sf::Text& text, b
     }
 }
 
+
+void SentinelInteraction::checkAnswerLevel3(bool playerAnswer, sf::Text& text,
+                                          bool& enemyTriggered, ButtonInteraction& buttonInteraction,
+                                          bool& proceedToNextLevel) {
+    (void)playerAnswer;
+    (void)enemyTriggered;
+    bool randomOutcome = dist(rng) == 1;
+    
+    if (randomOutcome) {
+        text.setString("Correct. You have proven yourself worthy.");
+        ascent = true;
+        isCorrect = true;
+        proceedToNextLevel = true;
+    } else {
+        text.setString("Incorrect. The journey continues...");
+        buttonInteraction.resetPrompt();
+        resetSentinelInteraction = true;
+    }
+}
 
 void SentinelInteraction::handleAscentAndCleanup(std::unique_ptr<Enemy>& enemy, sf::Text& text, bool& enemyTriggered,
                                                  bool& enemySpawned, ButtonInteraction& buttonInteraction, float deltaTime) {
@@ -316,6 +463,29 @@ void SentinelInteraction::handleAscentAndCleanupLevel2(std::unique_ptr<Enemy>& e
         }
     }
 }
+
+
+void SentinelInteraction::handleAscentAndCleanupLevel3(std::unique_ptr<Enemy>& enemy,
+                                                      sf::Text& text, bool& enemyTriggered,
+                                                      ButtonInteraction& buttonInteraction,
+                                                      float deltaTime) {
+    if (ascent) {
+        float ascentSpeed = 500.0f;
+        enemy->setPosition(enemy->getPosition().x,
+                         enemy->getPosition().y - ascentSpeed * deltaTime);
+
+        if (enemy->getPosition().y + enemy->getGlobalBounds().height < 0) {
+            enemy->setPosition(1600, -500);
+            resetState();
+            enemyTriggered = false;
+            text.setString("");
+            buttonInteraction.resetPrompt();
+            ascent = false;
+            resetSentinelInteraction = true;
+        }
+    }
+}
+
 bool SentinelInteraction::isAscending() const {
     return ascent;
 }

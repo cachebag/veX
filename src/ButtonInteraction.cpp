@@ -105,6 +105,69 @@ void ButtonInteraction::handleInteractionLevel2(const sf::Vector2f& playerPos,
         window.draw(text);
     }
 }
+
+void ButtonInteraction::handleInteractionLevel3(const sf::Vector2f& playerPos, 
+                                              const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions,
+                                              sf::RenderWindow& window, bool& enemyTriggered, 
+                                              bool& enemyDescending, bool& sentinelDescendLevel3) {
+    bool nearButton = false;
+
+    for (const auto& tile : tilePositions) {
+        if (tile.second == AssetType::Button) {
+            sf::Vector2f buttonPos = tile.first;
+            // Use the same distance check as other levels
+            if (distance(playerPos, buttonPos) < 100.0f) {
+                nearButton = true;
+                if (promptVisible && !interactionInProgress) {
+                    text.setString("Press F to prompt the sentinel...");  // Make consistent with other levels
+                    text.setPosition(buttonPos.x - 50, buttonPos.y - 50);
+                }
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::F) && !interactionInProgress) {
+                    // Debug output to verify the button press
+                    std::cout << "Level 3 button pressed\n";
+                    
+                    timerStart = std::chrono::steady_clock::now();
+                    showingText = true;
+                    promptVisible = false;
+                    
+                    // Set these flags before sentinelDescendLevel3
+                    enemyTriggered = true;
+                    enemyDescending = true;
+                    sentinelDescendLevel3 = true;
+                    
+                    interactionInProgress = true;
+                    text.setString("");
+                    
+                    resetSentinelInteraction = true;
+
+                    // Debug output to verify flags
+                    std::cout << "enemyTriggered: " << enemyTriggered << "\n";
+                    std::cout << "sentinelDescendLevel3: " << sentinelDescendLevel3 << "\n";
+                }
+            }
+        }
+    }
+
+    if (showingText) {
+        auto now = std::chrono::steady_clock::now();
+        float elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - timerStart).count();
+        if (elapsed >= displayDuration) {
+            showingText = false;
+        }
+    }
+
+    if ((nearButton && promptVisible) || showingText) {
+        window.draw(text);
+    }
+}
+
+void ButtonInteraction::resetAllFlags() {
+    promptVisible = true;
+    interactionInProgress = false;
+    showingText = false;
+}
+
 void ButtonInteraction::resetPrompt() {
     promptVisible = true;
     interactionInProgress = false;

@@ -1,5 +1,3 @@
-// main.cpp
-
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics.hpp>
@@ -24,20 +22,17 @@
 #include "../include/ButtonInteraction.hpp"
 #include "../include/SentinelInteraction.hpp"
 
-// Function declarations
 void enableMouse();
 void disableMouse();
 
-// Enums and utility functions
 enum class GameMode { Play, Edit };
 enum class GameState { Title, Play, Exit };
 
 bool isValidAssetType(int assetTypeInt) {
     return assetTypeInt >= static_cast<int>(AssetType::Brick) &&
-           assetTypeInt <= static_cast<int>(AssetType::Ground);
+           assetTypeInt <= static_cast<int>(AssetType::Statue3);
 }
 
-// Draw grid function
 void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float gridSize) {
     sf::VertexArray lines(sf::Lines);
     for (float y = 0; y < viewSize.y; y += gridSize) {
@@ -51,7 +46,6 @@ void drawGrid(sf::RenderWindow& window, const sf::Vector2f& viewSize, float grid
     window.draw(lines);
 }
 
-// Save level function
 void saveLevel(sf::RenderWindow& window, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions) {
     enableMouse();
     window.create(sf::VideoMode(1280, 720), "veX - Saving...", sf::Style::Close);
@@ -68,7 +62,6 @@ void saveLevel(sf::RenderWindow& window, const std::vector<std::pair<sf::Vector2
     disableMouse();
 }
 
-// Load level from file function
 std::vector<std::pair<sf::Vector2f, AssetType>> loadLevelFromFile(const std::string& filepath, std::vector<Platform>& platforms,
                                                                   const std::map<AssetType, sf::Texture>& textures) {
     std::vector<std::pair<sf::Vector2f, AssetType>> tiles;
@@ -85,15 +78,16 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevelFromFile(const std::str
         if (textureIt != textures.end()) {
             const sf::Texture& tileTexture = textureIt->second;
             sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
-            bool isGrassy = (assetType == AssetType::Grassy || assetType == AssetType::Ground);
-            platforms.emplace_back(pos.x, pos.y, size.x, size.y, tileTexture, isGrassy);
+            bool isGrassy = (assetType == AssetType::Grassy || assetType == AssetType::Ground || assetType == AssetType::Ground3);
+            if (assetType != AssetType::Tree && assetType != AssetType::Button && assetType != AssetType::Statue3) {
+                platforms.emplace_back(pos.x, pos.y, size.x, size.y, tileTexture, isGrassy);
+            }
         }
     }
     inFile.close();
     return tiles;
 }
 
-// Load level function
 std::vector<std::pair<sf::Vector2f, AssetType>> loadLevel(sf::RenderWindow& window, std::vector<Platform>& platforms,
                                                           const std::map<AssetType, sf::Texture>& textures, bool isDefault = false) {
     enableMouse();
@@ -113,7 +107,6 @@ std::vector<std::pair<sf::Vector2f, AssetType>> loadLevel(sf::RenderWindow& wind
     return tiles;
 }
 
-// Update view function
 void updateView(sf::RenderWindow& window, sf::View& view) {
     float baseWidth = 1920.0f;
     float baseHeight = 1080.0f;
@@ -122,7 +115,6 @@ void updateView(sf::RenderWindow& window, sf::View& view) {
     window.setView(view);
 }
 
-// Mouse functions
 void disableMouse() {
     Display* display = XOpenDisplay(nullptr);
     Window root = DefaultRootWindow(display);
@@ -148,7 +140,6 @@ void enableMouse() {
     XCloseDisplay(display);
 }
 
-// Main function
 int main() {
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
@@ -181,10 +172,7 @@ int main() {
 
     AssetType currentAsset = AssetType::Brick;
 
-    // Load textures for level 1
-    
     std::map<AssetType, sf::Texture> textureMap;
-    // Load all textures
     if (!textureMap[AssetType::Brick].loadFromFile("assets/tutorial_level/left_grass.png") ||
         !textureMap[AssetType::Dripstone].loadFromFile("assets/tutorial_level/dripstone.png") ||
         !textureMap[AssetType::LeftRock].loadFromFile("assets/tutorial_level/left_rock.png") ||
@@ -192,12 +180,15 @@ int main() {
         !textureMap[AssetType::Tree].loadFromFile("assets/tutorial_level/tree.png") ||
         !textureMap[AssetType::Grassy].loadFromFile("assets/tutorial_level/grassy.png") ||
         !textureMap[AssetType::Button].loadFromFile("assets/tutorial_level/button.png") ||
-        // Level 2 textures
         !textureMap[AssetType::Stair1].loadFromFile("assets/level2/stair1.png") ||
         !textureMap[AssetType::Stair2].loadFromFile("assets/level2/stair2.png") ||
         !textureMap[AssetType::RightStair1].loadFromFile("assets/level2/rightstair1.png") ||
         !textureMap[AssetType::RightStair2].loadFromFile("assets/level2/rightstair2.png") ||
-        !textureMap[AssetType::Ground].loadFromFile("assets/level2/floor.png")) {
+        !textureMap[AssetType::Ground].loadFromFile("assets/level2/floor.png") ||
+        !textureMap[AssetType::Ground3].loadFromFile("assets/level3/ground.png") ||
+        !textureMap[AssetType::Platform3].loadFromFile("assets/level3/platform.png") ||
+        !textureMap[AssetType::Brick3].loadFromFile("assets/level3/brick.png") ||
+        !textureMap[AssetType::Statue3].loadFromFile("assets/level3/statue.png")) {
         std::cerr << "Failed to load textures" << std::endl;
         return -1;
     }
@@ -208,6 +199,9 @@ int main() {
     Background nextLevelBackground("assets/level2/background.png",
                                    "assets/level2/middleground.png",
                                    "assets/level2/foreground.png", sf::Vector2u(1920, 1080));
+    Background level3Background("assets/level3/clouds.png",
+                                "assets/level3/town.png",
+                                "assets/tutorial_level/middleground.png", sf::Vector2u(1920, 1080));
 
     std::vector<std::pair<sf::Vector2f, AssetType>> tilePositions = loadLevel(window, platforms, textureMap, true);
 
@@ -220,6 +214,7 @@ int main() {
     bool proceedToNextLevel = false;
     int currentLevel = 1;
     bool sentinelDescendLevel2 = false;
+    bool sentinelDescendLevel3 = false;  // Add this line
 
     while (window.isOpen()) {
         sf::Event event;
@@ -258,7 +253,6 @@ int main() {
                     tilePositions = loadLevel(window, platforms, textureMap, false);
                 }
 
-                // Asset selection in edit mode, based on the current level
                 if (currentLevel == 1) {
                     if (event.key.code == sf::Keyboard::Num1) currentAsset = AssetType::Brick;
                     if (event.key.code == sf::Keyboard::Num2) currentAsset = AssetType::Dripstone;
@@ -270,49 +264,68 @@ int main() {
                     if (event.key.code == sf::Keyboard::Num2) currentAsset = AssetType::Stair2;
                     if (event.key.code == sf::Keyboard::Num3) currentAsset = AssetType::RightStair1;
                     if (event.key.code == sf::Keyboard::Num4) currentAsset = AssetType::RightStair2;
-                    if (event.key.code == sf::Keyboard::Num5) currentAsset = AssetType::Button;  // Add this line
+                    if (event.key.code == sf::Keyboard::Num5) currentAsset = AssetType::Button;
                     if (event.key.code == sf::Keyboard::Num6) currentAsset = AssetType::Ground;
+                } else if (currentLevel == 3) {
+                    if (event.key.code == sf::Keyboard::Num1) currentAsset = AssetType::Ground3;
+                    if (event.key.code == sf::Keyboard::Num2) currentAsset = AssetType::Platform3;
+                    if (event.key.code == sf::Keyboard::Num3) currentAsset = AssetType::Brick3;
+                    if (event.key.code == sf::Keyboard::Num4) currentAsset = AssetType::Statue3;
+                    if (event.key.code == sf::Keyboard::Num5) currentAsset = AssetType::Button;
                 }
             }
 
             if (currentMode == GameMode::Edit) {
-                sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
-                sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
-                sf::Vector2f tilePos(static_cast<float>(static_cast<int>(worldPos.x / gridSize) * gridSize),
-                                     static_cast<float>(static_cast<int>(worldPos.y / gridSize) * gridSize));
+    sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
+    sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
+    sf::Vector2f tilePos(static_cast<float>(static_cast<int>(worldPos.x / gridSize) * gridSize),
+                         static_cast<float>(static_cast<int>(worldPos.y / gridSize) * gridSize));
 
-                if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-                    if (std::find_if(tilePositions.begin(), tilePositions.end(),
-                                     [&](const std::pair<sf::Vector2f, AssetType>& tile) { return tile.first == tilePos; }) == tilePositions.end()) {
-                        tilePositions.emplace_back(tilePos, currentAsset);
-                        sf::Texture tileTexture = (textureMap)[currentAsset];
-                        sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
+    // Existing code for adding tiles with left-click
+    if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+        if (std::find_if(tilePositions.begin(), tilePositions.end(),
+                         [&](const std::pair<sf::Vector2f, AssetType>& tile) { return tile.first == tilePos; }) == tilePositions.end()) {
+            tilePositions.emplace_back(tilePos, currentAsset);
+            sf::Texture tileTexture = textureMap[currentAsset];
+            sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
 
-                        if (currentAsset == AssetType::Grassy || currentAsset == AssetType::Ground) {
-                            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, true);
-                        } else if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button) {
-                            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, false);
-                        }
-                    }
-                }
+            if (currentAsset == AssetType::Grassy || currentAsset == AssetType::Ground || currentAsset == AssetType::Ground3) {
+                platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, true);
+            } else if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button && currentAsset != AssetType::Statue3) {
+                platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, false);
+            }
+        }
+    }
 
-if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-    if (std::find_if(tilePositions.begin(), tilePositions.end(),
-                     [&](const std::pair<sf::Vector2f, AssetType>& tile) { 
-                         return tile.first == tilePos; 
-                     }) == tilePositions.end()) {
-        tilePositions.emplace_back(tilePos, currentAsset);
-        sf::Texture tileTexture = (textureMap)[currentAsset];
-        sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
+    // Add this code to handle removing tiles with right-click
+    if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
+        // Find the tile at tilePos in tilePositions
+        auto tileIt = std::find_if(tilePositions.begin(), tilePositions.end(),
+                                   [&](const std::pair<sf::Vector2f, AssetType>& tile) {
+                                       return tile.first == tilePos;
+                                   });
+        if (tileIt != tilePositions.end()) {
+            // Remove the tile from tilePositions
+            tilePositions.erase(tileIt);
 
-        if (currentAsset == AssetType::Grassy || currentAsset == AssetType::Ground) {
-            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, true);
-        } else if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button) {
-            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, false);
+            // Also remove the corresponding Platform from platforms
+            auto platformIt = std::find_if(platforms.begin(), platforms.end(),
+                                           [&](const Platform& platform) {
+                                               const auto& tiles = platform.getTiles();
+                                               for (const auto& tile : tiles) {
+                                                   if (tile.getPosition() == tilePos) {
+                                                       return true;
+                                                   }
+                                               }
+                                               return false;
+                                           });
+            if (platformIt != platforms.end()) {
+                platforms.erase(platformIt);
+            }
         }
     }
 }
-            }
+
         }
 
         float deltaTime = clock.restart().asSeconds();
@@ -341,7 +354,37 @@ if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
                         sentinelInteraction.startLevel2Interaction();
                     }
                 }
-            }
+            // Replace the Level 3 section in main.cpp with this corrected version
+            } else if (currentLevel == 3) {
+                  level3Background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
+    
+                  if (sentinelDescendLevel3) {
+                      float targetYPosition = 200.0f;
+                      float descentSpeed = 500.0f;
+                      if (enemy->getPosition().y < targetYPosition) {
+                          enemy->setPosition(1600, enemy->getPosition().y + descentSpeed * deltaTime);
+                      } else {
+                          enemy->setPosition(1600, targetYPosition);
+                          sentinelDescendLevel3 = false;
+                          enemyTriggered = true;
+                          sentinelInteraction.startLevel3Interaction();
+                        }
+                  }
+
+                  if (enemyTriggered) {
+                      sentinelInteraction.triggerInteractionLevel3(window, text, enemyTriggered, 
+                                                                  enemyDescending, enemySpawned, 
+                                                                  enemy, deltaTime, player->getPosition(), 
+                                                                  buttonInteraction, proceedToNextLevel);
+                      window.draw(text);
+                  }
+
+                  // Handle button interaction for level 3
+                  buttonInteraction.handleInteractionLevel3(player->getPosition(), tilePositions, 
+                                                            window, enemyTriggered, enemyDescending, 
+                                                            sentinelDescendLevel3);
+            }             
+          
 
             for (const auto& tileData : tilePositions) {
                 auto it = textureMap.find(tileData.second);
@@ -362,6 +405,7 @@ if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
                     sentinelInteraction.triggerInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, player->getPosition(), buttonInteraction, proceedToNextLevel);
                     window.draw(text);
                 }
+            } else if (currentLevel == 3) {
             }
 
             if (currentMode == GameMode::Play) {
@@ -387,11 +431,15 @@ if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
                                                                     proceedToNextLevel);
                         window.draw(text);
                     }
-                    // Add this line to handle button interaction in level 2
                     buttonInteraction.handleInteractionLevel2(player->getPosition(), tilePositions, 
                                                               window, enemyTriggered, enemyDescending, 
                                                               sentinelDescendLevel2);
-}
+                }
+                if (currentLevel == 3) {
+                    buttonInteraction.handleInteractionLevel3(player->getPosition(), tilePositions, 
+                                                              window, enemyTriggered, enemyDescending, 
+                                                              sentinelDescendLevel3);  // Use the new Level 3 handler
+                }
             }
 
             if (currentMode == GameMode::Edit && debugMode) {
@@ -400,23 +448,45 @@ if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
 
             if (proceedToNextLevel && player->getPosition().x >= window.getSize().x - 75) {
                 proceedToNextLevel = false;
-                currentLevel = 2;
-                tilePositions.clear();
-                platforms.clear();
-                
-                tilePositions = loadLevelFromFile("levels/level2.txt", platforms, textureMap);
+                if (currentLevel == 1) {
+                    currentLevel = 2;
+                    tilePositions.clear();
+                    platforms.clear();
+                    
+                    tilePositions = loadLevelFromFile("levels/level2.txt", platforms, textureMap);
 
-                enemy->setPosition(100, -500);
-                player->setPosition(0, 850);
-                player->resetState();
-                updateView(window, view);
-                enemyTriggered = false;
-                enemySpawned = false;
-                sentinelInteraction.resetState();
-                text.setString("");
-                buttonInteraction.resetPrompt();
-                playerJustReset = true;
-                sentinelDescendLevel2 = false;
+                    enemy->setPosition(100, -500);
+                    player->setPosition(0, 850);
+                    player->resetState();
+                    enemy->flipSprite();
+                    updateView(window, view);
+                    enemyTriggered = false;
+                    enemySpawned = false;
+                    sentinelInteraction.resetState();
+                    text.setString("");
+                    buttonInteraction.resetPrompt();
+                    playerJustReset = true;
+                    sentinelDescendLevel2 = false;
+                } else if (currentLevel == 2) {
+                    currentLevel = 3;
+                    tilePositions.clear();
+                    platforms.clear();
+
+                    tilePositions = loadLevelFromFile("levels/level3.txt", platforms, textureMap);
+
+                    enemy->setPosition(1600, -500);
+                    enemy->flipSprite();
+                    player->setPosition(0, 850);
+                    player->resetState();
+                    updateView(window, view);
+                    enemyTriggered = false;
+                    enemySpawned = false;
+                    sentinelInteraction.resetState();
+                    text.setString("");
+                    buttonInteraction.resetPrompt();
+                    playerJustReset = true;
+                    sentinelDescendLevel3 = false;
+                }
             }
 
             window.display();
@@ -425,3 +495,4 @@ if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
 
     return 0;
 }
+

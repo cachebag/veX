@@ -19,7 +19,11 @@ public:
 
     void handleInteractionLevel2(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, 
                            sf::RenderWindow& window, bool& enemyTriggered, bool& enemyDescending, bool& sentinelDescendLevel2);
+
+    void handleInteractionLevel3(const sf::Vector2f& playerPos, const std::vector<std::pair<sf::Vector2f, AssetType>>& tilePositions, 
+                           sf::RenderWindow& window, bool& enemyTriggered, bool& enemyDescending, bool& sentinelDescendLevel3);
     void resetPrompt();
+    void resetAllFlags();  // Add this new method
 
 private:
     sf::Font font;
