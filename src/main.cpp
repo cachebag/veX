@@ -1,3 +1,4 @@
+//main.cpp
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics.hpp>
@@ -206,7 +207,7 @@ int main() {
     std::vector<std::pair<sf::Vector2f, AssetType>> tilePositions = loadLevel(window, platforms, textureMap, true);
 
     ButtonInteraction buttonInteraction;
-    SentinelInteraction sentinelInteraction;
+    SentinelInteraction sentinelInteraction(window, view, player, enemy);
 
     bool enemyTriggered = false;
     bool enemyDescending = false;
@@ -214,7 +215,19 @@ int main() {
     bool proceedToNextLevel = false;
     int currentLevel = 1;
     bool sentinelDescendLevel2 = false;
-    bool sentinelDescendLevel3 = false;  // Add this line
+    bool sentinelDescendLevel3 = false;
+    player->setSpawnPoint(sf::Vector2f(0, 850));
+
+    currentLevel = 3;
+    tilePositions.clear();
+    platforms.clear();
+    tilePositions = loadLevelFromFile("levels/level3.txt", platforms, textureMap);
+    enemy->setPosition(960, -500);
+    player->setPosition(0, 850);
+    player->setSpawnPoint(sf::Vector2f(0, 850));
+    player->resetState();
+    player->resetHealth();
+    updateView(window, view);
 
     while (window.isOpen()) {
         sf::Event event;
@@ -276,56 +289,50 @@ int main() {
             }
 
             if (currentMode == GameMode::Edit) {
-    sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
-    sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
-    sf::Vector2f tilePos(static_cast<float>(static_cast<int>(worldPos.x / gridSize) * gridSize),
-                         static_cast<float>(static_cast<int>(worldPos.y / gridSize) * gridSize));
+                sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
+                sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
+                sf::Vector2f tilePos(static_cast<float>(static_cast<int>(worldPos.x / gridSize) * gridSize),
+                                  static_cast<float>(static_cast<int>(worldPos.y / gridSize) * gridSize));
 
-    // Existing code for adding tiles with left-click
-    if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-        if (std::find_if(tilePositions.begin(), tilePositions.end(),
-                         [&](const std::pair<sf::Vector2f, AssetType>& tile) { return tile.first == tilePos; }) == tilePositions.end()) {
-            tilePositions.emplace_back(tilePos, currentAsset);
-            sf::Texture tileTexture = textureMap[currentAsset];
-            sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                    if (std::find_if(tilePositions.begin(), tilePositions.end(),
+                                   [&](const std::pair<sf::Vector2f, AssetType>& tile) { return tile.first == tilePos; }) == tilePositions.end()) {
+                        tilePositions.emplace_back(tilePos, currentAsset);
+                        sf::Texture tileTexture = textureMap[currentAsset];
+                        sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
 
-            if (currentAsset == AssetType::Grassy || currentAsset == AssetType::Ground || currentAsset == AssetType::Ground3) {
-                platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, true);
-            } else if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button && currentAsset != AssetType::Statue3) {
-                platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, false);
-            }
-        }
-    }
+                        if (currentAsset == AssetType::Grassy || currentAsset == AssetType::Ground || currentAsset == AssetType::Ground3) {
+                            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, true);
+                        } else if (currentAsset != AssetType::Tree && currentAsset != AssetType::Button && currentAsset != AssetType::Statue3) {
+                            platforms.emplace_back(tilePos.x, tilePos.y, size.x, size.y, tileTexture, false);
+                        }
+                    }
+                }
 
-    // Add this code to handle removing tiles with right-click
-    if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
-        // Find the tile at tilePos in tilePositions
-        auto tileIt = std::find_if(tilePositions.begin(), tilePositions.end(),
-                                   [&](const std::pair<sf::Vector2f, AssetType>& tile) {
-                                       return tile.first == tilePos;
-                                   });
-        if (tileIt != tilePositions.end()) {
-            // Remove the tile from tilePositions
-            tilePositions.erase(tileIt);
-
-            // Also remove the corresponding Platform from platforms
-            auto platformIt = std::find_if(platforms.begin(), platforms.end(),
-                                           [&](const Platform& platform) {
-                                               const auto& tiles = platform.getTiles();
-                                               for (const auto& tile : tiles) {
-                                                   if (tile.getPosition() == tilePos) {
-                                                       return true;
-                                                   }
-                                               }
-                                               return false;
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
+                    auto tileIt = std::find_if(tilePositions.begin(), tilePositions.end(),
+                                           [&](const std::pair<sf::Vector2f, AssetType>& tile) {
+                                               return tile.first == tilePos;
                                            });
-            if (platformIt != platforms.end()) {
-                platforms.erase(platformIt);
-            }
-        }
-    }
-}
+                    if (tileIt != tilePositions.end()) {
+                        tilePositions.erase(tileIt);
 
+                        auto platformIt = std::find_if(platforms.begin(), platforms.end(),
+                                                   [&](const Platform& platform) {
+                                                       const auto& tiles = platform.getTiles();
+                                                       for (const auto& tile : tiles) {
+                                                           if (tile.getPosition() == tilePos) {
+                                                               return true;
+                                                           }
+                                                       }
+                                                       return false;
+                                                   });
+                        if (platformIt != platforms.end()) {
+                            platforms.erase(platformIt);
+                        }
+                    }
+                }
+            }
         }
 
         float deltaTime = clock.restart().asSeconds();
@@ -354,46 +361,69 @@ int main() {
                         sentinelInteraction.startLevel2Interaction();
                     }
                 }
-            // Replace the Level 3 section in main.cpp with this corrected version
             } else if (currentLevel == 3) {
-                  level3Background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
+                level3Background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
     
-                  if (sentinelDescendLevel3) {
-                      float targetYPosition = 200.0f;
-                      float descentSpeed = 500.0f;
-                      if (enemy->getPosition().y < targetYPosition) {
-                          enemy->setPosition(1600, enemy->getPosition().y + descentSpeed * deltaTime);
-                      } else {
-                          enemy->setPosition(1600, targetYPosition);
-                          sentinelDescendLevel3 = false;
-                          enemyTriggered = true;
-                          sentinelInteraction.startLevel3Interaction();
+                if (sentinelDescendLevel3) {
+                    float targetYPosition = 200.0f;
+                    float descentSpeed = 500.0f;
+                    if (enemy->getPosition().y < targetYPosition) {
+                        enemy->setPosition(600, enemy->getPosition().y + descentSpeed * deltaTime);
+                    } else {
+                        enemy->setPosition(600, targetYPosition);
+                        sentinelDescendLevel3 = false;
+                        enemyTriggered = true;
+                        sentinelInteraction.startLevel3Interaction();
+                    }
+                }
+
+                // Draw background elements first
+                for (const auto& tileData : tilePositions) {
+                    auto it = textureMap.find(tileData.second);
+                    if (it != textureMap.end()) {
+                        sf::Sprite tile(it->second);
+                        tile.setPosition(tileData.first);
+                        window.draw(tile);
+                    }
+                }
+
+                // Update and draw boss fight elements
+                if (enemyTriggered) {
+                    if (sentinelInteraction.isInBossFight()) {
+                // Update boss fight logic
+                        sentinelInteraction.updateBossFight(deltaTime, enemy, player->getPosition());
+                        sentinelInteraction.checkGemCollision(player->getPosition());
+            
+                        // Check orb collisions with player
+                        if (!player->isInvulnerable() && !player->isPlayerDead()) {
+                            sf::FloatRect playerBounds = player->getGlobalBounds();
+                            for (const auto& orb : sentinelInteraction.getOrbs()) {
+                                if (playerBounds.intersects(orb.getGlobalBounds())) {
+                                    player->takeDamage();
+                                    break;
+                                }
+                            }
                         }
                   }
 
-                  if (enemyTriggered) {
-                      sentinelInteraction.triggerInteractionLevel3(window, text, enemyTriggered, 
-                                                                  enemyDescending, enemySpawned, 
-                                                                  enemy, deltaTime, player->getPosition(), 
-                                                                  buttonInteraction, proceedToNextLevel);
-                      window.draw(text);
-                  }
-
-                  // Handle button interaction for level 3
-                  buttonInteraction.handleInteractionLevel3(player->getPosition(), tilePositions, 
-                                                            window, enemyTriggered, enemyDescending, 
-                                                            sentinelDescendLevel3);
+                    // Regular sentinel interaction
+                    sentinelInteraction.triggerInteractionLevel3(window, text, enemyTriggered, 
+                                                               enemyDescending, enemySpawned, 
+                                                               enemy, deltaTime, player->getPosition(), 
+                                                               buttonInteraction, proceedToNextLevel);
+                    window.draw(text);
+                }
             }             
-          
 
-            for (const auto& tileData : tilePositions) {
-                auto it = textureMap.find(tileData.second);
-                if (it != textureMap.end()) {
-                    sf::Sprite tile(it->second);
-                    tile.setPosition(tileData.first);
-                    window.draw(tile);
-                } else {
-                    std::cerr << "Warning: Texture not found for AssetType " << static_cast<int>(tileData.second) << std::endl;
+            // Draw tiles for levels 1 and 2
+            if (currentLevel != 3) {
+                for (const auto& tileData : tilePositions) {
+                    auto it = textureMap.find(tileData.second);
+                    if (it != textureMap.end()) {
+                        sf::Sprite tile(it->second);
+                        tile.setPosition(tileData.first);
+                        window.draw(tile);
+                    }
                 }
             }
 
@@ -405,7 +435,6 @@ int main() {
                     sentinelInteraction.triggerInteractionLevel2(window, text, enemyTriggered, enemyDescending, enemySpawned, enemy, deltaTime, player->getPosition(), buttonInteraction, proceedToNextLevel);
                     window.draw(text);
                 }
-            } else if (currentLevel == 3) {
             }
 
             if (currentMode == GameMode::Play) {
@@ -413,32 +442,29 @@ int main() {
                 else player->update(deltaTime, platforms, window.getSize().x, window.getSize().y, *enemy);
 
                 if (!sentinelInteraction.isAscending()) {
-                    enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
+                    if (!sentinelInteraction.isInBossFight() || currentLevel != 3) {
+                        enemy->update(deltaTime, platforms, window.getSize().x, window.getSize().y);
+                    }
                 }
 
                 player->draw(window);
                 enemy->draw(window);
 
+                // Draw boss fight UI elements on top if in level 3 boss fight
+                if (currentLevel == 3 && sentinelInteraction.isInBossFight()) {
+                    sentinelInteraction.drawBossFightElements(window);
+                }
+
                 if (currentLevel == 1) {
                     buttonInteraction.handleInteraction(player->getPosition(), tilePositions, window, enemyTriggered, enemyDescending, enemySpawned);
-                }
-                
-                if (currentLevel == 2) {
-                    if (enemyTriggered) {
-                        sentinelInteraction.triggerInteractionLevel2(window, text, enemyTriggered, 
-                                                                    enemyDescending, enemySpawned, 
-                                                                    enemy, deltaTime, player->getPosition(), buttonInteraction, 
-                                                                    proceedToNextLevel);
-                        window.draw(text);
-                    }
+                } else if (currentLevel == 2) {
                     buttonInteraction.handleInteractionLevel2(player->getPosition(), tilePositions, 
-                                                              window, enemyTriggered, enemyDescending, 
-                                                              sentinelDescendLevel2);
-                }
-                if (currentLevel == 3) {
+                                                          window, enemyTriggered, enemyDescending, 
+                                                          sentinelDescendLevel2);
+                } else if (currentLevel == 3) {
                     buttonInteraction.handleInteractionLevel3(player->getPosition(), tilePositions, 
-                                                              window, enemyTriggered, enemyDescending, 
-                                                              sentinelDescendLevel3);  // Use the new Level 3 handler
+                                                          window, enemyTriggered, enemyDescending, 
+                                                          sentinelDescendLevel3);
                 }
             }
 
@@ -457,7 +483,9 @@ int main() {
 
                     enemy->setPosition(100, -500);
                     player->setPosition(0, 850);
+                    player->setSpawnPoint(sf::Vector2f(0, 850));
                     player->resetState();
+                    player->resetHealth();
                     enemy->flipSprite();
                     updateView(window, view);
                     enemyTriggered = false;
@@ -474,10 +502,12 @@ int main() {
 
                     tilePositions = loadLevelFromFile("levels/level3.txt", platforms, textureMap);
 
-                    enemy->setPosition(1600, -500);
+                    enemy->setPosition(960, -500);
                     enemy->flipSprite();
                     player->setPosition(0, 850);
+                    player->setSpawnPoint(sf::Vector2f(0, 850));
                     player->resetState();
+                    player->resetHealth();
                     updateView(window, view);
                     enemyTriggered = false;
                     enemySpawned = false;
@@ -495,4 +525,3 @@ int main() {
 
     return 0;
 }
-

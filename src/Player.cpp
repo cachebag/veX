@@ -1,6 +1,7 @@
 #include "../include/Player.hpp"
 #include "../include/Platform.hpp"
 #include "../include/Enemy.hpp"
+#include <cmath>
 #include <iostream>
 
 Player::Player(float startX, float startY)
@@ -16,7 +17,12 @@ Player::Player(float startX, float startY)
       frameDuration(0.1f),
       isIdle(true),
       canJump(true),
-      isJumping(false)
+      isJumping(false),
+      isDead(false),
+      respawnTimer(0.0f),
+      spawnPoint(startX, startY),
+      currentHealth(MAX_HEALTH),
+      invulnerableTimer(0.0f)
 {
     if (!walkingTexture.loadFromFile("assets/characters/player/veX_sprite_sheet.png")) {
         std::cerr << "Error loading walking texture file" << std::endl;
@@ -29,28 +35,53 @@ Player::Player(float startX, float startY)
     if (!jumpTexture.loadFromFile("assets/characters/player/veX_jump.png")) {
         std::cerr << "Error loading jump texture file" << std::endl;
     }
+
+    if (!deathTexture.loadFromFile("assets/characters/player/veX_death.png")) {
+        std::cerr << "Error loading death texture file" << std::endl;
+    }
     
     sprite.setTexture(idleTexture);
-
     currentFrame = sf::IntRect(0, 0, frameWidth, frameHeight);
     sprite.setTextureRect(currentFrame);
-
     sprite.setPosition(x, y);
     sprite.setScale(2.0f, 2.0f);
+
+    // Initialize health UI
+    for (int i = 0; i < MAX_HEALTH; i++) {
+        sf::CircleShape heart(15.f);
+        heart.setFillColor(sf::Color::Red);
+        heart.setPosition(50.f + (i * 40.f), 50.f);
+        hearts.push_back(heart);
+    }
 }
 
 sf::Vector2f Player::getPosition() const {
-    return sprite.getPosition();  // Returns the current position of the player
+    return sprite.getPosition();
 }
 
-
 void Player::update(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy) {
+    if (isDead) {
+        respawnTimer -= deltaTime;
+        if (respawnTimer <= 0) {
+            respawn();
+        }
+        return;
+    }
+
+    if (invulnerableTimer > 0) {
+        invulnerableTimer -= deltaTime;
+        // Make sprite flash when invulnerable
+        sprite.setColor(sf::Color(255, 255, 255, 
+            static_cast<sf::Uint8>((std::sin(invulnerableTimer * 10) + 1) * 127.5)));
+    } else {
+        sprite.setColor(sf::Color::White);
+    }
+
     handleInput(deltaTime);
     applyGravity(deltaTime);
     move(deltaTime, platforms, windowWidth, windowHeight, enemy);
 
     animationTimer += deltaTime;
-
     if (animationTimer >= frameDuration) {
         currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
         currentFrame.left = currentFrameIndex * frameWidth;
@@ -59,10 +90,16 @@ void Player::update(float deltaTime, const std::vector<Platform>& platforms, int
     }
 
     sprite.setPosition(x, y);
+
+    // Death by falling
+    if (y > windowHeight + 100) {
+        takeDamage();
+    }
 }
 
 void Player::draw(sf::RenderWindow& window) const {
     window.draw(sprite);
+    drawHealthUI(window);
 }
 
 sf::FloatRect Player::getGlobalBounds() const {
@@ -78,6 +115,8 @@ int Player::getOrbCount() const {
 }
 
 void Player::handleInput(float deltaTime) {
+    if (isDead) return;  // Don't handle input while dead
+
     float velocityX = 0.0f;
     bool isMoving = false;
 
@@ -126,8 +165,7 @@ void Player::handleInput(float deltaTime) {
 
     prevX = x;
     prevY = y;
-
-        x += velocityX * deltaTime;
+    x += velocityX * deltaTime;
 
     if (yVelocity >= 0) {
         isJumping = false;
@@ -154,6 +192,7 @@ void Player::handleInput(float deltaTime) {
         sprite.setTexture(walkingTexture);
     }
 }
+
 void Player::applyGravity(float deltaTime) {
     if (yVelocity > 0) {
         yVelocity += gravity * fallMultiplier * deltaTime;
@@ -193,13 +232,14 @@ void Player::boundDetection(int windowWidth, int windowHeight) {
 }
 
 void Player::move(float deltaTime, const std::vector<Platform>& platforms, int windowWidth, int windowHeight, Enemy& enemy) {
+    if (isDead) return;  // Don't move while dead
+
     y += yVelocity * deltaTime;
 
     sf::FloatRect playerBounds = sprite.getGlobalBounds();
     playerBounds.top = y;
 
     bool onGround = false;
-
     float edgeMargin = 10.0f;
 
     for (const auto& platform : platforms) {
@@ -242,6 +282,10 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms, int w
 
     sf::FloatRect enemyBounds = enemy.getGlobalBounds();
     if (playerBounds.intersects(enemyBounds)) {
+        if (!isInvulnerable() && enemy.isBossFight()) {
+            takeDamage();
+        }
+
         if (prevX < enemyBounds.left && x + playerBounds.width > enemyBounds.left) {
             x = enemyBounds.left - playerBounds.width;
         } else if (prevX > enemyBounds.left && x < enemyBounds.left + enemyBounds.width) {
@@ -265,12 +309,14 @@ void Player::move(float deltaTime, const std::vector<Platform>& platforms, int w
 }
 
 void Player::enemyDetection(Enemy& enemy) {
+    if (isDead) return;
+
     if (enemy.getGlobalBounds().intersects(sprite.getGlobalBounds())) {
-        if (enemy.getState() != Enemy::EnemyState::IDLE) {
+        if (enemy.getState() != Enemy::EnemyState::IDLE && !enemy.isBossFight()) {
             enemy.setState(Enemy::EnemyState::IDLE);  
         }
     } else {
-        if (enemy.getState() != Enemy::EnemyState::PATROLLING) {
+        if (enemy.getState() != Enemy::EnemyState::PATROLLING && !enemy.isBossFight()) {
             enemy.setState(Enemy::EnemyState::PATROLLING);  
         }
     }
@@ -281,7 +327,7 @@ void Player::setPosition(float newX, float newY) {
     y = newY;
     prevX = newX;
     prevY = newY;
-    sprite.setPosition(x, y); // Assuming `sprite` is your Player's SFML sprite
+    sprite.setPosition(x, y);
 }
 
 void Player::resetState() {
@@ -290,7 +336,7 @@ void Player::resetState() {
     canJump = true;
     isJumping = false;
     isIdle = true;
-    resetAnimation(); // Since resetAnimation() is private, it can be called here
+    resetAnimation();
 }
 
 void Player::resetAnimation() {
@@ -300,3 +346,68 @@ void Player::resetAnimation() {
     sprite.setTextureRect(currentFrame);
 }
 
+void Player::takeDamage() {
+    if (invulnerableTimer > 0 || isDead) return;
+
+    currentHealth--;
+    if (currentHealth <= 0) {
+        die();
+    } else {
+        invulnerableTimer = INVULNERABLE_DURATION;
+        // Knock back player slightly
+        yVelocity = jumpVelocity * 0.5f;
+    }
+}
+
+void Player::die() {
+    isDead = true;
+    respawnTimer = RESPAWN_DELAY;
+    sprite.setTexture(deathTexture);
+    resetAnimation();
+}
+
+void Player::respawn() {
+    isDead = false;
+    currentHealth = MAX_HEALTH;
+    x = spawnPoint.x;
+    y = spawnPoint.y;
+    yVelocity = 0.0f;
+    jumpCount = 0;
+    canJump = true;
+    isJumping = false;
+    isIdle = true;
+    sprite.setTexture(idleTexture);
+    resetAnimation();
+    sprite.setPosition(x, y);
+    invulnerableTimer = INVULNERABLE_DURATION;
+}
+
+void Player::drawHealthUI(sf::RenderWindow& window) const {
+    for (int i = 0; i < MAX_HEALTH; i++) {
+        // Draw empty heart
+        sf::CircleShape emptyHeart = hearts[i];
+        emptyHeart.setFillColor(sf::Color(100, 100, 100));
+        window.draw(emptyHeart);
+
+        // Draw filled heart if health remains
+        if (i < currentHealth) {
+            sf::CircleShape filledHeart = hearts[i];
+            filledHeart.setFillColor(sf::Color::Red);
+            window.draw(filledHeart);
+        }
+    }
+}
+
+void Player::setSpawnPoint(const sf::Vector2f& point) {
+    spawnPoint = point;
+}
+
+bool Player::isInvulnerable() const {
+    return invulnerableTimer > 0;
+}
+
+void Player::resetHealth() {
+    currentHealth = MAX_HEALTH;
+    isDead = false;
+    invulnerableTimer = 0.0f;
+}
