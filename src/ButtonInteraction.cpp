@@ -119,7 +119,7 @@ void ButtonInteraction::handleInteractionLevel3(const sf::Vector2f& playerPos,
             if (distance(playerPos, buttonPos) < 100.0f) {
                 nearButton = true;
                 if (promptVisible && !interactionInProgress) {
-                    text.setString("Press F to prompt the sentinel...");  // Make consistent with other levels
+                    text.setString("Press F...");  // Make consistent with other levels
                     text.setPosition(buttonPos.x - 50, buttonPos.y - 50);
                 }
 

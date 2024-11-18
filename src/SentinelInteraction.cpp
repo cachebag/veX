@@ -325,7 +325,7 @@ void SentinelInteraction::handleInitialInteractionLevel3(sf::RenderWindow& windo
         questionVisible = true;
         text.setString("You've made it far. What is it you seek");
         text.setPosition(1200, 150);
-        playerOptions.setString("Q: Please don't hurt me. \nT: Face me in combat!");
+        playerOptions.setString("Q: Please don't hurt me. \nT: Are you going to attack me now?");
         playerOptions.setPosition(playerPos.x, playerPos.y - 50);
         awaitingResponse = true;
     } 
@@ -383,7 +383,8 @@ void SentinelInteraction::handleQuestionResponseLevel3(sf::Text& text) {
         text.setString("");
         resetSentinelInteraction = true;
     } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::T) && !sentinelHasAnswered) {
-        text.setString("Prepare yourself for battle!");
+        text.setString("Prepare yourself...");
+        text.setPosition(300, 600);
         inBossFight = true;
         countdown = 3;
         countdownTimer = 1.0f;
@@ -589,24 +590,25 @@ void SentinelInteraction::updateBossFight(float deltaTime, std::unique_ptr<Enemy
     if (!waveComplete && orbsCollected >= gemsNeededPerWave[currentWave]) {
         waveComplete = true;
         waveTransitionTimer = WAVE_TRANSITION_DELAY;
-        currentWave++;
-        orbsCollected = 0;
-        canPlayerMove = false;
-        orbs.clear();
-        gems.clear();
-
-        // Boss defeated after completing all waves
-        if (currentWave >= TOTAL_WAVES) {
+        
+        // Check for final victory first
+        if (currentWave >= TOTAL_WAVES - 1 && orbsCollected >=gemsNeededPerWave[currentWave]) {  // -1 because waves are 0-based
             bossHealth = 0;
             inBossFight = false;
             isCorrect = true;
             showVictoryScreen = true;
             createVictoryParticles();
-        } else { 
-            bossHealth = MAX_HEALTH * (1.0f + (currentWave * 0.3f)); // Reduced health scaling
-            healthBar.setSize(sf::Vector2f(400.f, 20.f));
+            return;  // Exit immediately after triggering victory
         }
-
+        
+        // If not final wave, proceed to next wave
+        currentWave++;
+        orbsCollected = 0;
+        canPlayerMove = false;
+        orbs.clear();
+        gems.clear();
+        bossHealth = MAX_HEALTH * (1.0f + (currentWave * 0.3f)); // Reduced health scaling
+        healthBar.setSize(sf::Vector2f(400.f, 20.f));
     }
 
     // Wave transition period
@@ -646,15 +648,6 @@ void SentinelInteraction::updateBossFight(float deltaTime, std::unique_ptr<Enemy
     if (orbSpawnTimer >= currentSpawnInterval) {
         spawnOrbPattern(enemy);
         orbSpawnTimer = 0;
-    }
-
-    // Victory condition
-    if (currentWave >= TOTAL_WAVES && bossHealth <= 0) {
-        inBossFight = false;
-        isCorrect = true;
-        showVictoryScreen = true;
-        createVictoryParticles();
-        // Play victory sound here if you have sound effects
     }
     
     handleOrbs(deltaTime, playerPos);

@@ -10,6 +10,7 @@
 #include <fstream>
 #include <chrono>
 #include <random>
+#include <SFML/Audio.hpp>
 #include "../include/TitleScreen.hpp"
 #include "../include/nfd.h"
 #include "../include/Player.hpp"
@@ -145,6 +146,15 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "veX", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
 
+    sf::Music backgroundMusic;
+    if (!backgroundMusic.openFromFile("assets/song.mp3")) {  // or .ogg file
+        std::cerr << "Failed to load music\n";
+    } else {
+        backgroundMusic.setLoop(true);  // Makes the music repeat
+        backgroundMusic.setVolume(50.f);  // Adjust volume (0-100)
+        backgroundMusic.play();
+    }
+
     sf::Font font;
     if (!font.loadFromFile("assets/fonts/Merriweather-Regular.ttf")) {
         std::cerr << "Failed to load font\n";
@@ -221,17 +231,6 @@ int main() {
     bool sentinelDescendLevel3 = false;
     player->setSpawnPoint(sf::Vector2f(0, 850));
 
-    currentLevel = 3;
-    tilePositions.clear();
-    platforms.clear();
-    tilePositions = loadLevelFromFile("levels/level3.txt", platforms, textureMap);
-    enemy->setPosition(960, -500);
-    player->setPosition(0, 850);
-    player->setSpawnPoint(sf::Vector2f(0, 850));
-    player->resetState();
-    player->resetHealth();
-    updateView(window, view);
-
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -252,23 +251,26 @@ int main() {
             }
 
             if (gameState == GameState::Play) {
+                // Handle editor mode toggle
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::E) {
                     currentMode = (currentMode == GameMode::Play) ? GameMode::Edit : GameMode::Play;
                     currentMode == GameMode::Edit ? enableMouse() : disableMouse();
                 }
 
+                // Handle debug mode toggle
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::D && currentMode == GameMode::Edit) {
                     debugMode = !debugMode;
                 }
 
+                // Handle save/load
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::S) {
                     saveLevel(window, tilePositions);
                 }
-
                 if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::L) {
                     tilePositions = loadLevel(window, platforms, textureMap, false);
                 }
 
+                // Handle asset selection based on current level
                 if (currentLevel == 1) {
                     if (event.key.code == sf::Keyboard::Num1) currentAsset = AssetType::Brick;
                     if (event.key.code == sf::Keyboard::Num2) currentAsset = AssetType::Dripstone;
@@ -291,6 +293,7 @@ int main() {
                 }
             }
 
+            // Handle edit mode tile placement/removal
             if (currentMode == GameMode::Edit) {
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos);
@@ -301,7 +304,7 @@ int main() {
                     if (std::find_if(tilePositions.begin(), tilePositions.end(),
                                    [&](const std::pair<sf::Vector2f, AssetType>& tile) { return tile.first == tilePos; }) == tilePositions.end()) {
                         tilePositions.emplace_back(tilePos, currentAsset);
-                        sf::Texture tileTexture = textureMap[currentAsset];
+                        auto& tileTexture = textureMap[currentAsset];
                         sf::Vector2f size(tileTexture.getSize().x, tileTexture.getSize().y);
 
                         if (currentAsset == AssetType::Grassy || currentAsset == AssetType::Ground || currentAsset == AssetType::Ground3) {
@@ -344,14 +347,54 @@ int main() {
             titleScreen.handleInput();
             titleScreen.update(deltaTime);
             titleScreen.render();
+        } else if (gameState == GameState::Victory) {
+            window.clear();
+            
+            // Update and draw the victory screen
+            sentinelInteraction.updateVictoryScreen(deltaTime);
+            sentinelInteraction.drawVictoryScreen(window);
+            
+            // Handle victory screen input
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || 
+                sf::Keyboard::isKeyPressed(sf::Keyboard::Space) || 
+                sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                // Return to title screen
+                gameState = GameState::Title;
+                
+                // Reset game state
+                currentLevel = 1;
+                proceedToNextLevel = false;
+                enemyTriggered = false;
+                enemySpawned = false;
+                sentinelInteraction.resetState();
+                
+                // Reset player and enemy positions
+                player->setPosition(0, 850);
+                player->setSpawnPoint(sf::Vector2f(0, 850));
+                player->resetState();
+                player->resetHealth();
+                enemy->setPosition(1600, -500);
+                
+                // Load initial level
+                tilePositions = loadLevelFromFile("levels/level1.txt", platforms, textureMap);
+                
+                // Update view and other necessary resets
+                updateView(window, view);
+                text.setString("");
+                buttonInteraction.resetPrompt();
+            }
+            
+            window.display();
         } else if (gameState == GameState::Play) {
             window.clear();
             float playerX = player->getGlobalBounds().left;
 
+            // Render appropriate background based on current level
             if (currentLevel == 1) {
                 background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
             } else if (currentLevel == 2) {
                 nextLevelBackground.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
+                
                 if (sentinelDescendLevel2) {
                     float targetYPosition = 200.0f;
                     float descentSpeed = 500.0f;
@@ -363,100 +406,66 @@ int main() {
                         enemyTriggered = true;
                         sentinelInteraction.startLevel2Interaction();
                     }
-                } else if (gameState == GameState::Victory) {
-    window.clear();
-    
-    // Update and draw the victory screen
-    sentinelInteraction.updateVictoryScreen(deltaTime);
-    sentinelInteraction.drawVictoryScreen(window);
-    
-    // Handle victory screen input
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) || 
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Space) || 
-        sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-        // Return to title screen
-        gameState = GameState::Title;
-        
-        // Reset game state
-        currentLevel = 1;
-        proceedToNextLevel = false;
-        enemyTriggered = false;
-        enemySpawned = false;
-        sentinelInteraction.resetState();
-        
-        // Reset player and enemy positions
-        player->setPosition(0, 850);
-        player->setSpawnPoint(sf::Vector2f(0, 850));
-        player->resetState();
-        player->resetHealth();
-        enemy->setPosition(1600, -500);
-        
-        // Load initial level
-        tilePositions = loadLevelFromFile("levels/level1.txt", platforms, textureMap);
-        
-        // Update view and other necessary resets
-        updateView(window, view);
-        text.setString("");
-        buttonInteraction.resetPrompt();
+                }
+             } else if (currentLevel == 3) {
+    level3Background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
+
+    // Check for victory first, before any other level 3 logic
+    if (sentinelInteraction.isVictorious()) {
+        gameState = GameState::Victory;
+        enableMouse();
     }
-    
-    window.display();
-}
-            } else if (currentLevel == 3) {
-                level3Background.render(window, sf::Vector2u(1920, 1080), playerX, deltaTime);
-    
-                if (sentinelDescendLevel3) {
-                    float targetYPosition = 200.0f;
-                    float descentSpeed = 500.0f;
-                    if (enemy->getPosition().y < targetYPosition) {
-                        enemy->setPosition(600, enemy->getPosition().y + descentSpeed * deltaTime);
-                    } else {
-                        enemy->setPosition(600, targetYPosition);
-                        sentinelDescendLevel3 = false;
-                        enemyTriggered = true;
-                        sentinelInteraction.startLevel3Interaction();
+
+    if (sentinelDescendLevel3) {
+        float targetYPosition = 200.0f;
+        float descentSpeed = 500.0f;
+        if (enemy->getPosition().y < targetYPosition) {
+            enemy->setPosition(600, enemy->getPosition().y + descentSpeed * deltaTime);
+        } else {
+            enemy->setPosition(600, targetYPosition);
+            sentinelDescendLevel3 = false;
+            enemyTriggered = true;
+            sentinelInteraction.startLevel3Interaction();
+        }
+    }
+
+    // Draw background elements first
+    for (const auto& tileData : tilePositions) {
+        auto it = textureMap.find(tileData.second);
+        if (it != textureMap.end()) {
+            sf::Sprite tile(it->second);
+            tile.setPosition(tileData.first);
+            window.draw(tile);
+        }
+    }
+
+    // Update and draw boss fight elements
+    if (enemyTriggered) {
+        if (sentinelInteraction.isInBossFight()) {
+            // Update boss fight logic
+            sentinelInteraction.updateBossFight(deltaTime, enemy, player->getPosition());
+            sentinelInteraction.checkGemCollision(player->getPosition());
+
+            // Check orb collisions with player
+            if (!player->isInvulnerable() && !player->isPlayerDead()) {
+                sf::FloatRect playerBounds = player->getGlobalBounds();
+                for (const auto& orb : sentinelInteraction.getOrbs()) {
+                    if (playerBounds.intersects(orb.getGlobalBounds())) {
+                        player->takeDamage();
+                        break;
                     }
                 }
+            }
+        }
 
-                // Draw background elements first
-                for (const auto& tileData : tilePositions) {
-                    auto it = textureMap.find(tileData.second);
-                    if (it != textureMap.end()) {
-                        sf::Sprite tile(it->second);
-                        tile.setPosition(tileData.first);
-                        window.draw(tile);
-                    }
-                }
-
-                // Update and draw boss fight elements
-                if (enemyTriggered) {
-                    if (sentinelInteraction.isInBossFight()) {
-                // Update boss fight logic
-                        sentinelInteraction.updateBossFight(deltaTime, enemy, player->getPosition());
-                        sentinelInteraction.checkGemCollision(player->getPosition());
-
-                    
-            
-                        // Check orb collisions with player
-                        if (!player->isInvulnerable() && !player->isPlayerDead()) {
-                            sf::FloatRect playerBounds = player->getGlobalBounds();
-                            for (const auto& orb : sentinelInteraction.getOrbs()) {
-                                if (playerBounds.intersects(orb.getGlobalBounds())) {
-                                    player->takeDamage();
-                                    break;
-                                }
-                            }
-                        }
-                  }
-
-                    // Regular sentinel interaction
-                    sentinelInteraction.triggerInteractionLevel3(window, text, enemyTriggered, 
-                                                               enemyDescending, enemySpawned, 
-                                                               enemy, deltaTime, player->getPosition(), 
-                                                               buttonInteraction, proceedToNextLevel);
-                    window.draw(text);
-                }
-            }             
+        // Regular sentinel interaction
+        sentinelInteraction.triggerInteractionLevel3(window, text, enemyTriggered, 
+                                                   enemyDescending, enemySpawned, 
+                                                   enemy, deltaTime, player->getPosition(), 
+                                                   buttonInteraction, proceedToNextLevel);
+        window.draw(text);
+    }
+}            
 
             // Draw tiles for levels 1 and 2
             if (currentLevel != 3) {
@@ -500,7 +509,7 @@ int main() {
                     if (sentinelInteraction.isVictorious()) {
                         gameState = GameState::Victory;
                         enableMouse(); // Allow mouse for victory screen interaction
-                      }
+                    }
                 }
 
                 if (currentLevel == 1) {
