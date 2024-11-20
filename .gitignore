@@ -60,7 +60,3 @@ Thumbs.db
 # Ignore Git-specific files
 .git/
 
-./loki
-
-loki*
-
