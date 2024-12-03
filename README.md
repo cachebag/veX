@@ -7,11 +7,11 @@ The current implementation of this game will be to flesh out the P vs NP Quest f
 ##
 
 ## Some things to note:
-- `enemy.cpp` is the "sentry", within the context of the quest. any future additions to this NPC will be called 'enemy' for the sake of consistency.
 - The code is very hackish. Particularly in how player movement/animation is handled, the asset manager/level editor and the parallax factor calculations within `background.cpp`
-- The asset management needs LOTS of work, but for the sake of completing this project on time, I will not spend any effort to flesh out the asset manager yet.
-- The resolution scaling is horrible. Right now, the game runs best on 1920x1080 monitors and even then, across platforms it may be pretty buggy. This is admittedly due to my lack of expertise and willingness to figure out how to fix this. It could be an embarassingly easy fix, but I have never built a game from scratch with no engine so this will be the extent of my solution. If your laptop/desktop doesn't support 1920x1080, I am sorry. 
-
+- The asset management needs LOTS of work, but for the sake of completing this project on time, I will not spend any effort to flesh out the asset manager yet. 
+- The resolution scaling is horrible. Right now, the game runs best on 1920x1080 monitors and even then, across platforms it may be pretty buggy. This is admittedly due to my lack of expertise and willingness to figure out how to fix this. It could be an embarassingly easy fix, but I have never built a game from scratch with no engine so this will be the extent of my solution. If your laptop/desktop doesn't support 1920x1080, I am sorry.
+- This is _not intended_ to be a complete or fleshed out game. This is simply to demonstrate and practice C++ by way of submitting the project into my programming class. 
+ 
 ## 
 
 All background art, platforms, textures, etc. were pulled from [here](https://ansimuz.itch.io/gothicvania-patreon-collection), however the enemy, player and weapon designs were all created from scratch using Gimp.
